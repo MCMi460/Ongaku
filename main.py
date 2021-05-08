@@ -4,6 +4,8 @@ from subprocess import run
 from platform import mac_ver
 from requests import get
 from json import loads
+from rumps import App
+from threading import Thread
 
 # Set Discord Rich Presence ID
 rpc = Presence('402370117901484042')
@@ -152,10 +154,28 @@ def update():
         # Update Rich Presence with non-dynamic data
         rpc.update(details="Stopped",state="Nothing is currently playing",small_image="stop",large_image=assetName,large_text="There's nothing here!",small_text="Currently stopped")
 
+# Run update loop on a separate thread so the menu bar app can run on the main thread
+class BackgroundUpdate(Thread):
+    def run(self,*args,**kwargs):
+        # Loop for the rest of the runtime
+        while True:
+            # Call update function
+            update()
+            # Wait because Discord only accepts the newest Rich Presence update every 15 seconds
+            sleep(15)
 
-# Loop for the rest of the runtime
-while True:
-    # Call update function
-    update()
-    # Wait because Discord only accepts the newest Rich Presence update every 15 seconds
-    sleep(15)
+# Grab class and start it
+background_update = BackgroundUpdate()
+background_update.start()
+
+# Define menu bar object and run it
+class OngakuApp(object):
+    def __init__(self):
+        self.app = App("Ongaku", "♫")
+
+    def run(self):
+        self.app.run()
+
+if __name__ == '__main__':
+    app = OngakuApp()
+    app.run()
