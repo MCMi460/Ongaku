@@ -2,6 +2,8 @@ from time import sleep, time
 from pypresence import Presence
 from subprocess import run
 from platform import mac_ver
+from requests import get
+from json import loads
 
 # Set Discord Rich Presence ID
 rpc = Presence('402370117901484042')
@@ -56,7 +58,7 @@ def get_status():
     		end tell
         end run
     """
-    return str(run(['osascript', '-e', cmd % appName], capture_output=True).stdout)[2:][:-3]
+    return int(run(['osascript', '-e', cmd % appName], capture_output=True).stdout.decode('utf-8').rstrip())
 
 # Get trackname will return the name of the current track
 def get_trackname():
@@ -67,7 +69,7 @@ def get_trackname():
     		end tell
         end run
     """
-    return str(run(['osascript', '-e', cmd % appName], capture_output=True).stdout)[2:][:-3]
+    return run(['osascript', '-e', cmd % appName], capture_output=True).stdout.decode('utf-8').rstrip()
 
 # Get info will return the album and artist of the current track
 def get_info():
@@ -78,7 +80,7 @@ def get_info():
     		end tell
         end run
     """
-    return str(run(['osascript', '-e', cmd % appName], capture_output=True).stdout)[2:][:-3]
+    return run(['osascript', '-e', cmd % appName], capture_output=True).stdout.decode('utf-8').rstrip()
 
 # Get duration returns the Music player's position and the duration of the current track
 def get_duration():
@@ -89,15 +91,29 @@ def get_duration():
     		end tell
         end run
     """
-    return str(run(['osascript', '-e', cmd % appName], capture_output=True).stdout)[2:][:-3]
+    return run(['osascript', '-e', cmd % appName], capture_output=True).stdout.decode('utf-8').rstrip()
+
+# Find out whether this is a user-uploaded song or otherwise
+def get_cloud():
+    cmd = """
+        on run
+    		tell application "%s"
+    			return cloud status of current track
+    		end tell
+        end run
+    """
+    return run(['osascript', '-e', cmd % appName], capture_output=True).stdout.decode('utf-8').rstrip()
 
 # Contains logic code that calls functions to grab data using Apple Script and updates the RPC controller with the data
 def update():
     # Grab playing status
     status = get_status()
-    # If the song is playing
-    if status == "1":
+    # If the song is on the player get name, album, and artist
+    if status > 0:
         trackname = get_trackname()
+        state = get_info()
+    # If the song is playing
+    if status == 1:
         details = trackname
         small_image = "play"
         small_text = "Actively playing"
@@ -107,15 +123,31 @@ def update():
         # Format position and duration data
         pos = float(stamp.split(", ")[0])
         duration = float(stamp.split(", ")[1])
-        # Update Rich Presence with start and end time data
-        rpc.update(details=details,state=get_info(),small_image=small_image,large_image=assetName,large_text=trackname,small_text=small_text,start=epoch,end=epoch + (duration - pos))
-    elif status == "2":
-        trackname = get_trackname()
+        type = get_cloud()
+        failed = False
+        if type == "purchased" or type == "subscription":
+            try:
+                # Use Music's API to grab Store URL by searching for it. Apple Script cannot get the Store URL, so I had to code this alternate method
+                url = loads(get(f"https://itunes.apple.com/search?term={trackname.replace(' ','+')}+{trackname.replace(' ','+')}+{state.replace(', ',' ').replace(' ','+')}").content.decode('utf-8'))["results"][0]['trackViewUrl']
+                # Update RPC with Store URL button included
+                rpc.update(details=details,state=state,small_image=small_image,large_image=assetName,large_text=trackname,small_text=small_text,start=epoch,end=epoch + (duration - pos),buttons=[{"label": "View in Store", "url": url}])
+            except:
+                # If it cannot get a song, then it will just update without the Store URL button
+                failed = True
+        else:
+            # Song is either self-uploaded or otherwise.
+            failed = True
+        # Display without Store URL button
+        if failed:
+            rpc.update(details=details,state=state,small_image=small_image,large_image=assetName,large_text=trackname,small_text=small_text,start=epoch,end=epoch + (duration - pos))
+    # If the song is paused
+    elif status == 2:
         details = f"Paused - {trackname}"
         small_image = "pause"
         small_text = "Currently paused"
         # Update Rich Presence
-        rpc.update(details=details,state=get_info(),small_image=small_image,large_image=assetName,large_text=trackname,small_text=small_text)
+        rpc.update(details=details,state=state,small_image=small_image,large_image=assetName,large_text=trackname,small_text=small_text)
+    # If the song is stopped (rather, anything else)
     else:
         # Update Rich Presence with non-dynamic data
         rpc.update(details="Stopped",state="Nothing is currently playing",small_image="stop",large_image=assetName,large_text="There's nothing here!",small_text="Currently stopped")
@@ -125,5 +157,5 @@ def update():
 while True:
     # Call update function
     update()
-    # Wait because Discord only accepts Rich Presence updates every 15 seconds
+    # Wait because Discord only accepts the newest Rich Presence update every 15 seconds
     sleep(15)
