@@ -1,25 +1,18 @@
-from time import sleep, time
-from pypresence import Presence
-from subprocess import run
-from platform import mac_ver
-from requests import get
-from json import loads
-from rumps import App, clicked, alert, notification
-from threading import Thread
+from time import sleep, time # This lets us get the exact time stamp as well as wait time
+from pypresence import Presence # This is what connects us to Discord and lets us change our status
+from subprocess import run # This will allow us to execute Apple Script
+from sys import platform # This gives us our current OS' information
+from requests import get # This lets us receive website data
+from json import loads # This is useful for formatting some web data in the future
+from threading import Thread # This allows us to run multiple blocking processes at once
 
-# Set Discord Rich Presence ID
-rpc = Presence('402370117901484042')
-
-# Attempt to connect to Discord. Will remain open until it connect
-while True:
-    try:
-        rpc.connect()
-        break
-    except:
-        continue
-
-# Sometimes PyPresence returns a Client ID error if you don't put a second .connect() after the loop
-rpc.connect()
+# Make sure platform is MacOS
+if platform.startswith("darwin") != True:
+    print(f"There is not currently a {platform} version supported, please use a different application.")
+    quit()
+else:
+    from rumps import App, clicked, alert, notification # This module adds menu bar support
+    from platform import mac_ver # Get MacOS version
 
 # Get MacOS version
 ver = float(mac_ver()[0])
@@ -41,6 +34,30 @@ elif ver == 10.15:
 else:
     appName = "iTunes"
     assetName = "itunes_logo"
+
+# Set Discord Rich Presence ID
+rpc = Presence('402370117901484042')
+
+# Set fails variable to 0
+fails = 0
+
+# Attempt to connect to Discord. Will wait until it connects
+while True:
+    try:
+        rpc.connect()
+        break
+    except Exception as e:
+        sleep(0.1)
+        fails += 1
+        if fails > 500:
+            # If program fails 500 consecutive times in a row to connect, then send a notification with the exception
+            print(e)
+            notification("Error in Ongaku", "Make an issue if error persists", f"\"{e}\"")
+            quit()
+        continue
+
+# Sometimes PyPresence returns a Client ID error even if we already connected, so this will try to connect again
+rpc.connect()
 
 # All of these 'get functions' use Python subprocess-ing to pipe Apple Script data and get it
 # Then the fancy stuff when returning the function is just to format the string to look proper
@@ -159,6 +176,7 @@ def update():
 # Run update loop on a separate thread so the menu bar app can run on the main thread
 class BackgroundUpdate(Thread):
     def run(self,*args,**kwargs):
+
         # Loop for the rest of the runtime
         while True:
             # Call update function
@@ -176,13 +194,16 @@ background_update.start()
 
 # Define menu bar object and run it
 class OngakuApp(App):
+    # Make a reconnect button
     @clicked("Reconnect")
     def prefs(self, _):
+        # Attempt to connect to Discord, and if failed, it will output an alert with the exception
         try:
             rpc.connect()
-            alert("Connected!")
+            alert("Connected to Discord!")
         except Exception as e:
             alert(f"Failed to connect:\n\"{e}\"")
 
+# Make sure process is the main script and run status bar app
 if __name__ == "__main__":
     OngakuApp("♫").run()
