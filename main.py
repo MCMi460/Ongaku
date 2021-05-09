@@ -4,7 +4,7 @@ from subprocess import run
 from platform import mac_ver
 from requests import get
 from json import loads
-from rumps import App
+from rumps import App, quit_application
 from threading import Thread
 
 # Set Discord Rich Presence ID
@@ -28,7 +28,7 @@ ver = float(mac_ver()[0])
 appName = "Music"
 
 # If Big Sur 11.3 or later, then use the updated Apple Music logo
-if ver >= 11.3:
+if ver >= 10.16:
     assetName = "big_sur_logo"
 # If Big Sur version is below 11.3, quit program due to issues grabbing music data with Apple Script before 11.3
 elif 11.3 > ver >= 11.0:
@@ -114,6 +114,8 @@ def update():
     if status > 0:
         trackname = get_trackname()
         state = get_info()
+        if len(state) < 2:
+            state = "Song has no artist assigned"
     # If the song is playing
     if status == 1:
         details = trackname
@@ -160,7 +162,11 @@ class BackgroundUpdate(Thread):
         # Loop for the rest of the runtime
         while True:
             # Call update function
-            update()
+            try:
+                update()
+            except Exception as e:
+                print(e)
+                quit_application()
             # Wait because Discord only accepts the newest Rich Presence update every 15 seconds
             sleep(15)
 
