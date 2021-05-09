@@ -4,7 +4,7 @@ from subprocess import run
 from platform import mac_ver
 from requests import get
 from json import loads
-from rumps import App, quit_application
+from rumps import App, clicked, alert, notification
 from threading import Thread
 
 # Set Discord Rich Presence ID
@@ -165,8 +165,8 @@ class BackgroundUpdate(Thread):
             try:
                 update()
             except Exception as e:
+                notification("Error in Ongaku", "Make an issue if error persists", f"\"{e}\"")
                 print(e)
-                quit_application()
             # Wait because Discord only accepts the newest Rich Presence update every 15 seconds
             sleep(15)
 
@@ -175,13 +175,14 @@ background_update = BackgroundUpdate()
 background_update.start()
 
 # Define menu bar object and run it
-class OngakuApp(object):
-    def __init__(self):
-        self.app = App("Ongaku", "♫")
+class OngakuApp(App):
+    @clicked("Reconnect")
+    def prefs(self, _):
+        try:
+            rpc.connect()
+            alert("Connected!")
+        except Exception as e:
+            alert(f"Failed to connect:\n\"{e}\"")
 
-    def run(self):
-        self.app.run()
-
-if __name__ == '__main__':
-    app = OngakuApp()
-    app.run()
+if __name__ == "__main__":
+    OngakuApp("♫").run()
