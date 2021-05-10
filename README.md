@@ -31,7 +31,7 @@ If nothing breaks or acts weird, then go ahead and type `python3 setup.py py2app
 Give it time to finish, then type `open ./dist` and enjoy your app!
 
 ---
-If you have any issues, [contact me here][support].
+If you have any issues, [contact me here](https://mi460.dev/bugs).
 
 ### Credits
 [Spotlight](https://github.com/spotlightishere) for (unknowingly and unwillingly) letting me use their code as reference for this.
