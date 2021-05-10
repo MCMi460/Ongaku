@@ -129,10 +129,22 @@ def update():
     status = get_status()
     # If the song is on the player get name, album, and artist
     if status > 0:
+        local = False
         trackname = get_trackname()
         state = get_info()
         if len(state) < 2:
             state = "Song has no artist assigned"
+        type = get_cloud()
+        if type == "purchased" or type == "subscription":
+            try:
+                # Use Music's API to grab Store URL by searching for it. Apple Script cannot get the Store URL, so I had to code this alternate method
+                url = loads(get(f"https://itunes.apple.com/search?term={trackname.replace(' ','+')}+{trackname.replace(' ','+')}+{state.replace(', ',' ').replace(' ','+')}").content.decode('utf-8'))["results"][0]['trackViewUrl']
+            except:
+                # If it cannot get a song, then it will just update without the Store URL button
+                local = True
+        else:
+            # Song is either self-uploaded or otherwise.
+            local = True
     # If the song is playing
     if status == 1:
         details = trackname
@@ -144,30 +156,25 @@ def update():
         # Format position and duration data
         pos = float(stamp.split(", ")[0])
         duration = float(stamp.split(", ")[1])
-        type = get_cloud()
-        failed = False
-        if type == "purchased" or type == "subscription":
-            try:
-                # Use Music's API to grab Store URL by searching for it. Apple Script cannot get the Store URL, so I had to code this alternate method
-                url = loads(get(f"https://itunes.apple.com/search?term={trackname.replace(' ','+')}+{trackname.replace(' ','+')}+{state.replace(', ',' ').replace(' ','+')}").content.decode('utf-8'))["results"][0]['trackViewUrl']
-                # Update RPC with Store URL button included
-                rpc.update(details=details,state=state,small_image=small_image,large_image=assetName,large_text=trackname,small_text=small_text,start=epoch,end=epoch + (duration - pos),buttons=[{"label": "View in Store", "url": url}])
-            except:
-                # If it cannot get a song, then it will just update without the Store URL button
-                failed = True
+        # Update Rich Presence
+        if local:
+            # Display without Store URL button
+            rpc.update(details=details,state=state,small_image=small_image,large_image=assetName,large_text=details,small_text=small_text,start=epoch,end=epoch + (duration - pos))
         else:
-            # Song is either self-uploaded or otherwise.
-            failed = True
-        # Display without Store URL button
-        if failed:
-            rpc.update(details=details,state=state,small_image=small_image,large_image=assetName,large_text=trackname,small_text=small_text,start=epoch,end=epoch + (duration - pos))
+            # Update RPC with Store URL button included
+            rpc.update(details=details,state=state,small_image=small_image,large_image=assetName,large_text=trackname,small_text=small_text,start=epoch,end=epoch + (duration - pos),buttons=[{"label": "View in Store", "url": url}])
     # If the song is paused
     elif status == 2:
         details = f"Paused - {trackname}"
         small_image = "pause"
         small_text = "Currently paused"
         # Update Rich Presence
-        rpc.update(details=details,state=state,small_image=small_image,large_image=assetName,large_text=trackname,small_text=small_text)
+        if local:
+            # Display without Store URL button
+            rpc.update(details=details,state=state,small_image=small_image,large_image=assetName,large_text=trackname,small_text=small_text)
+        else:
+            # Update RPC with Store URL button included
+            rpc.update(details=details,state=state,small_image=small_image,large_image=assetName,large_text=trackname,small_text=small_text,buttons=[{"label": "View in Store", "url": url}])
     # If the song is stopped (rather, anything else)
     else:
         # Update Rich Presence with non-dynamic data
