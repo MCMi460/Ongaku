@@ -1,0 +1,3 @@
+rumps>=0.3.0
+requests>=2.25.1
+pypresence>=4.2.0
