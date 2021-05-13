@@ -20,6 +20,10 @@ Now, we're going to install the required modules. Just copy `python3 -m pip inst
 
 Next, type `python3 -m pip install py2app` to install our application builder.
 
+For the latest build of Ongaku, you will need to install PyQt5. Make sure you have [brew](https://brew.sh/) and type `brew install pyqt@5`
+
+*py2app, our application builder, current doesn't support PyQt5 for Apple Silicon (as far as I know), so building this for arm64 is likely impossible at the moment.*
+
 **Step 2:**
 
 Now, let's run the app to make sure nothing breaks. Copy `python3 main.py` to the terminal and make sure the app runs well.

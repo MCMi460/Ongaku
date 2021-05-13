@@ -1,10 +1,4 @@
-from time import sleep, time # This lets us get the exact time stamp as well as wait time
-from pypresence import Presence # This is what connects us to Discord and lets us change our status
-from subprocess import run # This will allow us to execute Apple Script
-from sys import platform # This gives us our current OS' information
-from requests import get # This lets us receive website data
-from json import loads # This is useful for formatting some web data in the future
-from threading import Thread # This allows us to run multiple blocking processes at once
+from sys import platform, exit, argv # This gives us our current OS' information
 
 # Make sure platform is MacOS
 if platform.startswith("darwin") != True:
@@ -13,6 +7,12 @@ if platform.startswith("darwin") != True:
 else:
     from rumps import App, clicked, alert, notification # This module adds menu bar support
     from platform import mac_ver # Get MacOS version
+    from requests import get # This lets us receive website data
+    from json import loads # This is useful for formatting some web data in the future
+    from threading import Thread # This allows us to run multiple blocking processes at once
+    from time import sleep, time # This lets us get the exact time stamp as well as wait time
+    from pypresence import Presence # This is what connects us to Discord and lets us change our status
+    from subprocess import run # This will allow us to execute Apple Script
 
 # Get MacOS version
 ver = float(mac_ver()[0])
@@ -38,26 +38,79 @@ else:
 # Set Discord Rich Presence ID
 rpc = Presence('402370117901484042')
 
-# Set fails variable to 0
-fails = 0
+def connect():
+    # Set fails variable to 0
+    fails = 0
 
-# Attempt to connect to Discord. Will wait until it connects
-while True:
-    try:
-        rpc.connect()
-        break
-    except Exception as e:
-        sleep(0.1)
-        fails += 1
-        if fails > 500:
-            # If program fails 500 consecutive times in a row to connect, then send a notification with the exception
+    from asyncio import set_event_loop, new_event_loop # Import event loop data
+
+    # Set event loop so pypresence doesn't break
+    set_event_loop(new_event_loop())
+
+    # Wait so the window doesn't immediately open and close
+    sleep(1)
+
+    while True:
+        # Attempt to connect to Discord. Will wait until it connects
+        try:
+            rpc.connect()
+            break
+        except Exception as e:
             print(e)
-            notification("Error in Ongaku", "Make an issue if error persists", f"\"{e}\"")
-            quit()
-        continue
+            sleep(0.1)
+            fails += 1
+            if fails > 500:
+                # If program fails 500 consecutive times in a row to connect, then send a notification with the exception
+                notification("Error in Ongaku", "Make an issue if error persists", f"\"{e}\"")
+                exit(f"Error, failed after 500 attempts\n\"{e}\"")
+            continue
+    # Close window and end session with PyQt
+    win.close()
+    app.exit()
 
-# Sometimes PyPresence returns a Client ID error even if we already connected, so this will try to connect again
-rpc.connect()
+# Create window
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import (
+    QApplication,
+    QLabel,
+    QMainWindow,
+    QVBoxLayout,
+    QWidget,
+)
+
+class Window(QMainWindow):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setupUi()
+
+    def setupUi(self):
+        self.setWindowTitle("Ongaku")
+        self.resize(480, 240)
+        self.move(196, 270)
+        self.centralWidget = QWidget()
+        self.setCentralWidget(self.centralWidget)
+        # Create and connect widgets
+        self.notice = QLabel("This window is here until Discord notices us.  Once we connect,  we'll close this window.  Hope you're having a great day! <3", self)
+        self.notice.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        self.notice.setWordWrap(True)
+        # Set the layout
+        layout = QVBoxLayout()
+        layout.addWidget(self.notice)
+        self.centralWidget.setLayout(layout)
+
+# Run connect loop in thread
+Thread(target=connect,daemon=True).start()
+
+app = QApplication(argv)
+win = Window()
+win.show()
+app.exec()
+
+try:
+    # Sometimes PyPresence returns a Client ID error even if we already connected, so this will try to connect again
+    rpc.connect()
+except:
+    exit("Failed to connect")
 
 # All of these 'get functions' use Python subprocess-ing to pipe Apple Script data and get it
 # Then the fancy stuff when returning the function is just to format the string to look proper
@@ -183,7 +236,6 @@ def update():
 # Run update loop on a separate thread so the menu bar app can run on the main thread
 class BackgroundUpdate(Thread):
     def run(self,*args,**kwargs):
-
         # Loop for the rest of the runtime
         while True:
             # Call update function
