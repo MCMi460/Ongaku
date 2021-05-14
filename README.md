@@ -4,36 +4,15 @@ _You know, [ongaku](https://jisho.org/word/%E9%9F%B3%E6%A5%BD)._
 A port of **[Ongaku](https://github.com/spotlightishere/Ongaku)** to Python. Why? I don't know.
 
 A simple application providing the now playing state from iTunes (or the Music app) as RPC in Discord via [PyPresence](https://github.com/qwertyquerty/pypresence).
-
 ## How to use
-
 Unzip and open the latest x86_64 version from the [releases tab](https://github.com/MCMi460/Ongaku/releases)
-
 ## How to build
-
-**Step 1:**
-
-### [Download master.zip](https://github.com/MCMi460/Ongaku/archive/main.zip)
-Unzip, then type this in terminal: `cd ~/Downloads/Ongaku-main`
-
-Now, we're going to install the required modules. Just copy `python3 -m pip install -r requirements.txt` into the terminal.
-
-Next, type `python3 -m pip install py2app` to install our application builder.
-
-For the latest build of Ongaku, you will need to install PyQt5. Make sure you have [brew](https://brew.sh/) and type `brew install pyqt@5`
-
-*py2app, our application builder, current doesn't support PyQt5 for Apple Silicon (as far as I know), so building this for arm64 is likely impossible at the moment.*
-
-**Step 2:**
-
-Now, let's run the app to make sure nothing breaks. Copy `python3 main.py` to the terminal and make sure the app runs well.
-
-**Step 3:**
-
-If nothing breaks or acts weird, then go ahead and type `python3 setup.py py2app` in the terminal.
-
-Give it time to finish, then type `open ./dist` and enjoy your app!
-
+Paste this into your terminal. Feel free to follow along by reading the steps in [build.sh](https://raw.githubusercontent.com/MCMi460/Ongaku/main/build.sh).
+```
+curl https://raw.githubusercontent.com/MCMi460/Ongaku/main/build.sh -o build.sh
+chmod -R 777 build.sh
+./build.sh
+```
 ---
 If you have any issues, [contact me here](https://mi460.dev/bugs).
 

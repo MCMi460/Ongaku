@@ -42,14 +42,6 @@ def connect():
     # Set fails variable to 0
     fails = 0
 
-    from asyncio import set_event_loop, new_event_loop # Import event loop data
-
-    # Set event loop so pypresence doesn't break
-    set_event_loop(new_event_loop())
-
-    # Wait so the window doesn't immediately open and close
-    sleep(1)
-
     while True:
         # Attempt to connect to Discord. Will wait until it connects
         try:
@@ -64,47 +56,8 @@ def connect():
                 notification("Error in Ongaku", "Make an issue if error persists", f"\"{e}\"")
                 exit(f"Error, failed after 500 attempts\n\"{e}\"")
             continue
-    # Close window and end session with PyQt
-    win.close()
-    app.exit()
 
-# Create window
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import (
-    QApplication,
-    QLabel,
-    QMainWindow,
-    QVBoxLayout,
-    QWidget,
-)
-
-class Window(QMainWindow):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setupUi()
-
-    def setupUi(self):
-        self.setWindowTitle("Ongaku")
-        self.resize(480, 240)
-        self.move(196, 270)
-        self.centralWidget = QWidget()
-        self.setCentralWidget(self.centralWidget)
-        # Create and connect widgets
-        self.notice = QLabel("This window is here until Discord notices us.  Once we connect,  we'll close this window.  Hope you're having a great day! <3", self)
-        self.notice.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-        self.notice.setWordWrap(True)
-        # Set the layout
-        layout = QVBoxLayout()
-        layout.addWidget(self.notice)
-        self.centralWidget.setLayout(layout)
-
-# Run connect loop in thread
-Thread(target=connect,daemon=True).start()
-
-app = QApplication(argv)
-win = Window()
-win.show()
-app.exec()
+connect()
 
 try:
     # Sometimes PyPresence returns a Client ID error even if we already connected, so this will try to connect again
@@ -184,9 +137,15 @@ def update():
     if status > 0:
         local = False
         trackname = get_trackname()
+        if len(trackname) < 2:
+            trackname = "Song has no name assigned"
+        elif len(trackname) > 128:
+            trackname = trackname[:127]
         state = get_info()
         if len(state) < 2:
             state = "Song has no artist assigned"
+        elif len(state) > 128:
+            state = state[:127]
         type = get_cloud()
         if type == "purchased" or type == "subscription":
             try:
