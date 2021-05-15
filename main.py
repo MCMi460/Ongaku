@@ -197,14 +197,19 @@ class BackgroundUpdate(Thread):
     def run(self,*args,**kwargs):
         # Loop for the rest of the runtime
         while True:
-            # Call update function
-            try:
-                update()
-            except Exception as e:
-                notification("Error in Ongaku", "Make an issue if error persists", f"\"{e}\"")
-                print(e)
-            # Wait because Discord only accepts the newest Rich Presence update every 15 seconds
-            sleep(15)
+            # Only run when app is activated
+            if activated:
+                # Call update function
+                try:
+                    update()
+                except Exception as e:
+                    notification("Error in Ongaku", "Make an issue if error persists", f"\"{e}\"")
+                    print(e)
+                # Wait because Discord only accepts the newest Rich Presence update every 15 seconds
+                sleep(15)
+
+# Make sure it runs on start
+activated = True
 
 # Grab class and start it
 background_update = BackgroundUpdate()
@@ -212,6 +217,19 @@ background_update.start()
 
 # Define menu bar object and run it
 class OngakuApp(App):
+    def __init__(self):
+        super(OngakuApp, self).__init__("♫")
+        self.menu = ["Disable", "Reconnect"]
+    # Make an activate button
+    @clicked("Disable")
+    def button(self, sender):
+        global activated
+        activated = not activated
+        if sender.title == "Disable":
+            sender.title = "Enable"
+            rpc.clear()
+        else:
+            sender.title = "Disable"
     # Make a reconnect button
     @clicked("Reconnect")
     def prefs(self, _):
@@ -224,4 +242,4 @@ class OngakuApp(App):
 
 # Make sure process is the main script and run status bar app
 if __name__ == "__main__":
-    OngakuApp("♫").run()
+    OngakuApp().run()
