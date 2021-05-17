@@ -133,10 +133,14 @@ def get_cloud():
 def update():
     # Grab playing status
     status = get_status()
+    global player_status
+    player_status = status
     # If the song is on the player get name, album, and artist
     if status > 0:
         local = False
         trackname = get_trackname()
+        global cached_track
+        cached_track = trackname
         if len(trackname) < 2:
             trackname = "Song has no name assigned"
         elif len(trackname) > 128:
@@ -189,6 +193,7 @@ def update():
             rpc.update(details=details,state=state,small_image=small_image,large_image=assetName,large_text=trackname,small_text=small_text,buttons=[{"label": "View in Store", "url": url}])
     # If the song is stopped (rather, anything else)
     else:
+        cached_track = ""
         # Update Rich Presence with non-dynamic data
         rpc.update(details="Stopped",state="Nothing is currently playing",small_image="stop",large_image=assetName,large_text="There's nothing here!",small_text="Currently stopped")
 
@@ -206,10 +211,19 @@ class BackgroundUpdate(Thread):
                     notification("Error in Ongaku", "Make an issue if error persists", f"\"{e}\"")
                     print(e)
                 # Wait because Discord only accepts the newest Rich Presence update every 15 seconds
-                sleep(15)
+                # We loop through waiting so that the enable/disable key in the toolbar doesn't slow the program or anything
+                for i in range(15):
+                    # This is to optimize update speeds
+                    if not activated or cached_track != str(get_trackname()) or player_status != get_status():
+                        print('optimized')
+                        break
+                    sleep(1)
 
 # Make sure it runs on start
 activated = True
+# Set trackname and state for slight optimizations to code
+cached_track = ""
+player_status = ""
 
 # Grab class and start it
 background_update = BackgroundUpdate()
