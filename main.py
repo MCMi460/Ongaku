@@ -256,12 +256,13 @@ class OngakuApp(App):
         global activated
         activated = not activated
         global call_update
-        call_update = True
         if sender.title == "Disable":
             sender.title = "Enable"
             rpc.clear()
+            call_update = False
         else:
             sender.title = "Disable"
+            call_update = True
     # Make a reconnect button
     @clicked("Reconnect")
     def prefs(self, _):
