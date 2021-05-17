@@ -13,6 +13,7 @@ else:
     from time import sleep, time # This lets us get the exact time stamp as well as wait time
     from pypresence import Presence # This is what connects us to Discord and lets us change our status
     from subprocess import run # This will allow us to execute Apple Script
+    from math import floor # For optimization
 
 # Get MacOS version
 ver = float(mac_ver()[0])
@@ -167,18 +168,21 @@ def update():
         small_image = "play"
         small_text = "Actively playing"
         # Get current epoch time
-        epoch = time()
+        global start
+        start = round(time())
         stamp = get_duration()
         # Format position and duration data
-        pos = float(stamp.split(", ")[0])
-        duration = float(stamp.split(", ")[1])
+        pos = round(float(stamp.split(", ")[0]))
+        duration = round(float(stamp.split(", ")[1]))
+        global end
+        end = start + (duration - pos)
         # Update Rich Presence
         if local:
             # Display without Store URL button
-            rpc.update(details=details,state=state,small_image=small_image,large_image=assetName,large_text=details,small_text=small_text,start=epoch,end=epoch + (duration - pos))
+            rpc.update(details=details,state=state,small_image=small_image,large_image=assetName,large_text=details,small_text=small_text,start=start,end=end)
         else:
             # Update RPC with Store URL button included
-            rpc.update(details=details,state=state,small_image=small_image,large_image=assetName,large_text=trackname,small_text=small_text,start=epoch,end=epoch + (duration - pos),buttons=[{"label": "View in Store", "url": url}])
+            rpc.update(details=details,state=state,small_image=small_image,large_image=assetName,large_text=trackname,small_text=small_text,start=start,end=end,buttons=[{"label": "View in Store", "url": url}])
     # If the song is paused
     elif status == 2:
         details = f"Paused - {trackname}"
@@ -200,29 +204,42 @@ def update():
 # Run update loop on a separate thread so the menu bar app can run on the main thread
 class BackgroundUpdate(Thread):
     def run(self,*args,**kwargs):
+        call_update = True
         # Loop for the rest of the runtime
         while True:
             # Only run when app is activated
             if activated:
-                # Call update function
-                try:
-                    update()
-                except Exception as e:
-                    notification("Error in Ongaku", "Make an issue if error persists", f"\"{e}\"")
-                    print(e)
-                # Wait because Discord only accepts the newest Rich Presence update every 15 seconds
-                # We loop through waiting so that the enable/disable key in the toolbar doesn't slow the program or anything
-                for i in range(15):
-                    # This is to optimize update speeds
-                    if not activated or cached_track != str(get_trackname()) or player_status != get_status():
-                        break
+                # The following logic statements are to check if the song playing has changed. If so, it will queue it up for Discord to update
+                # Check if track playing is different
+                if cached_track != str(get_trackname()):
+                    call_update = True
+                # Check if user changed the player state
+                elif player_status != get_status():
+                    call_update = True
+                elif player_status == 1:
+                    stamp = get_duration()
+                    # If player status is set to playing, check if the start vs end time is within 15 (or so) seconds of what it's supposed to be. If not, then update
+                    if round(end - start) - round(float(stamp.split(", ")[1]) - float(stamp.split(", ")[0])) not in range(15):
+                        call_update = True
+                if call_update:
+                    # Call update function
+                    try:
+                        update()
+                    except Exception as e:
+                        notification("Error in Ongaku", "Make an issue if error persists", f"\"{e}\"")
+                        print(e)
+                    call_update = False
+                else:
+                    # Wait one second
                     sleep(1)
 
 # Make sure it runs on start
 activated = True
-# Set trackname and state for slight optimizations to code
+# Set variables for slight optimizations to code
 cached_track = ""
 player_status = ""
+start = 0
+end = 0
 
 # Grab class and start it
 background_update = BackgroundUpdate()
