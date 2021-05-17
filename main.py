@@ -215,7 +215,6 @@ class BackgroundUpdate(Thread):
                 for i in range(15):
                     # This is to optimize update speeds
                     if not activated or cached_track != str(get_trackname()) or player_status != get_status():
-                        print('optimized')
                         break
                     sleep(1)
 
