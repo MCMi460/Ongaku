@@ -13,7 +13,6 @@ else:
     from time import sleep, time # This lets us get the exact time stamp as well as wait time
     from pypresence import Presence # This is what connects us to Discord and lets us change our status
     from subprocess import run # This will allow us to execute Apple Script
-    from math import floor # For optimization
 
 # Get MacOS version
 ver = float(mac_ver()[0])
