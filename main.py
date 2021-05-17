@@ -203,7 +203,7 @@ def update():
 # Run update loop on a separate thread so the menu bar app can run on the main thread
 class BackgroundUpdate(Thread):
     def run(self,*args,**kwargs):
-        call_update = True
+        global call_update
         # Loop for the rest of the runtime
         while True:
             # Only run when app is activated
@@ -239,6 +239,7 @@ cached_track = ""
 player_status = ""
 start = 0
 end = 0
+call_update = True
 
 # Grab class and start it
 background_update = BackgroundUpdate()
@@ -254,6 +255,8 @@ class OngakuApp(App):
     def button(self, sender):
         global activated
         activated = not activated
+        global call_update
+        call_update = True
         if sender.title == "Disable":
             sender.title = "Enable"
             rpc.clear()
