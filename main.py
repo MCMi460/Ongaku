@@ -38,6 +38,16 @@ else:
 # Set Discord Rich Presence ID
 rpc = Presence('402370117901484042')
 
+from os.path import expanduser # Get home directory path
+from datetime import datetime # Lets us get current time and date
+
+path = expanduser("~/Library/Application Support/Ongaku/error.txt")
+
+def log_error(error):
+    print(error)
+    with open(path,"a") as append:
+        append.write(f'[{datetime.now().strftime("%Y/%m/%d %H:%M:%S")}] {error}\n')
+
 def connect():
     # Set fails variable to 0
     fails = 0
@@ -48,12 +58,12 @@ def connect():
             rpc.connect()
             break
         except Exception as e:
-            print(e)
             sleep(0.1)
             fails += 1
             if fails > 500:
                 # If program fails 500 consecutive times in a row to connect, then send a notification with the exception
                 notification("Error in Ongaku", "Make an issue if error persists", f"\"{e}\"")
+                log_error(e)
                 exit(f"Error, failed after 500 attempts\n\"{e}\"")
             continue
 
@@ -229,7 +239,7 @@ class BackgroundUpdate(Thread):
                         update()
                     except Exception as e:
                         notification("Error in Ongaku", "Make an issue if error persists", f"\"{e}\"")
-                        print(e)
+                        log_error(e)
                     call_update = False
                 else:
                     # Wait one second
@@ -268,13 +278,18 @@ class OngakuApp(App):
             call_update = True
     # Make a reconnect button
     @clicked("Reconnect")
-    def prefs(self, _):
+    def reconnect(self, _):
         # Attempt to connect to Discord, and if failed, it will output an alert with the exception
         try:
+            rpc.clear()
+        except:
+            pass
+        try:
             rpc.connect()
-            alert("Connected to Discord!")
+            alert("Connected to Discord!\n(You may have to restart Discord)")
         except Exception as e:
             alert(f"Failed to connect:\n\"{e}\"")
+            log_error(e)
 
 # Make sure process is the main script and run status bar app
 if __name__ == "__main__":
