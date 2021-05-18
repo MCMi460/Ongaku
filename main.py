@@ -1,4 +1,4 @@
-from sys import platform, exit, argv # This gives us our current OS' information
+from sys import platform, exit # This gives us our current OS' information
 
 # Make sure platform is MacOS
 if platform.startswith("darwin") != True:
@@ -68,6 +68,9 @@ except:
 # All of these 'get functions' use Python subprocess-ing to pipe Apple Script data and get it
 # Then the fancy stuff when returning the function is just to format the string to look proper
 
+def process(cmd):
+    return run(['osascript', '-e', cmd % appName], capture_output=True).stdout.decode('utf-8').rstrip()
+
 # Get status will return 1 if Music is playing, 2 if Music is paused, and 0 if Music is stopped
 def get_status():
     cmd = """
@@ -83,7 +86,7 @@ def get_status():
     		end tell
         end run
     """
-    return int(run(['osascript', '-e', cmd % appName], capture_output=True).stdout.decode('utf-8').rstrip())
+    return int(process(cmd))
 
 # Get trackname will return the name of the current track
 def get_trackname():
@@ -94,7 +97,7 @@ def get_trackname():
     		end tell
         end run
     """
-    return run(['osascript', '-e', cmd % appName], capture_output=True).stdout.decode('utf-8').rstrip()
+    return process(cmd)
 
 # Get info will return the album and artist of the current track
 def get_info():
@@ -105,7 +108,7 @@ def get_info():
     		end tell
         end run
     """
-    return run(['osascript', '-e', cmd % appName], capture_output=True).stdout.decode('utf-8').rstrip()
+    return process(cmd)
 
 # Get duration returns the Music player's position and the duration of the current track
 def get_duration():
@@ -116,7 +119,7 @@ def get_duration():
     		end tell
         end run
     """
-    return run(['osascript', '-e', cmd % appName], capture_output=True).stdout.decode('utf-8').rstrip()
+    return process(cmd)
 
 # Find out whether this is a user-uploaded song or otherwise
 def get_cloud():
@@ -127,7 +130,7 @@ def get_cloud():
     		end tell
         end run
     """
-    return run(['osascript', '-e', cmd % appName], capture_output=True).stdout.decode('utf-8').rstrip()
+    return process(cmd)
 
 # Contains logic code that calls functions to grab data using Apple Script and updates the RPC controller with the data
 def update():
