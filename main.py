@@ -217,6 +217,8 @@ def update():
 class BackgroundUpdate(Thread):
     def run(self,*args,**kwargs):
         global call_update
+        # Set fails variable to 0
+        fails = 0
         # Loop for the rest of the runtime
         while True:
             # Only run when app is activated
@@ -237,9 +239,13 @@ class BackgroundUpdate(Thread):
                     # Call update function
                     try:
                         update()
+                        fails = 0
                     except Exception as e:
                         notification("Error in Ongaku", "Make an issue if error persists", f"\"{e}\"")
                         log_error(e)
+                        fails += 1
+                        if fails > 20:
+                            exit(f"Error, failed after 500 attempts\n\"{e}\"")
                     call_update = False
                 else:
                     # Wait one second
