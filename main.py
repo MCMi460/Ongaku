@@ -41,12 +41,19 @@ rpc = Presence('402370117901484042')
 from os.path import expanduser # Get home directory path
 from datetime import datetime # Lets us get current time and date
 
-path = expanduser("~/Library/Application Support/Ongaku/error.txt")
+path = expanduser("~/Library/Application Support/Ongaku")
 
 def log_error(error):
     print(error)
-    with open(path,"a") as append:
-        append.write(f'[{datetime.now().strftime("%Y/%m/%d %H:%M:%S")}] {error}\n')
+    while True:
+        try:
+            with open(f'{path}/error.txt',"a") as append:
+                append.write(f'[{datetime.now().strftime("%Y/%m/%d %H:%M:%S")}] {error}\n')
+            break
+        except:
+            from os import mkdir # Create the directory
+            mkdir(path)
+            continue
 
 def connect():
     # Set fails variable to 0
