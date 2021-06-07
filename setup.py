@@ -7,7 +7,7 @@ OPTIONS = {
     'iconfile': 'build/AppIcon.icns',
     'plist': {
         'CFBundleName': 'Ongaku',
-        'CFBundleShortVersionString': '1.1',
+        'CFBundleShortVersionString': '1.2',
         'LSUIElement': True,
     },
     'packages': ['rumps'],
