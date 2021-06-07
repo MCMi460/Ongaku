@@ -2,10 +2,9 @@ from sys import platform, exit # This gives us our current OS' information
 
 # Make sure platform is MacOS
 if platform.startswith("darwin") != True:
-    print(f"There is not currently a {platform} version supported, please use a different application.")
-    quit()
+    exit(f"There is not currently a {platform} version supported, please use a different application.")
 else:
-    from rumps import App, clicked, alert, notification # This module adds menu bar support
+    from rumps import App, clicked, alert, notification, quit_application # This module adds menu bar support
     from platform import mac_ver # Get MacOS version
     from requests import get # This lets us receive website data
     from json import loads # This is useful for formatting some web data in the future
@@ -25,8 +24,7 @@ if ver >= 10.16:
     assetName = "big_sur_logo"
 # If Big Sur version is below 11.3, quit program due to issues grabbing music data with Apple Script before 11.3
 elif 11.3 > ver >= 11.0:
-    print("Apple Script is broken before Big Sur 11.3 - please update to use this program.")
-    quit()
+    exit("Apple Script is broken before Big Sur 11.3 - please update to use this program.")
 # Don't know what this is about, but I wanted to port Spotlight's code to Python exactly, so I kept this
 elif ver == 10.15:
     assetName = "music_logo"
@@ -247,8 +245,11 @@ class BackgroundUpdate(Thread):
                         notification("Error in Ongaku", "Make an issue if error persists", f"\"{e}\"")
                         log_error(e)
                         fails += 1
-                        if fails > 20:
-                            exit(f"Error, failed after 500 attempts\n\"{e}\"")
+                        if fails > 5:
+                            print(f"Error, failed after 5 attempts\n\"{e}\"")
+                            quit_application()
+                            exit()
+                            # Here, we just use everything we can to get the application to stop running!
                     call_update = False
                 else:
                     # Wait one second
@@ -270,7 +271,7 @@ background_update.start()
 # Define menu bar object and run it
 class OngakuApp(App):
     def __init__(self):
-        super(OngakuApp, self).__init__("♫")
+        super(OngakuApp, self).__init__("Ongaku",title="♫")
         self.menu = ["Disable", "Reconnect"]
     # Make an activate button
     @clicked("Disable")
