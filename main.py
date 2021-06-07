@@ -184,8 +184,6 @@ def update():
     # If the song is playing
     if status == 1:
         details = trackname
-        small_image = "play"
-        small_text = "Actively playing"
         # Get current epoch time
         global start
         start = round(time())
@@ -198,27 +196,25 @@ def update():
         # Update Rich Presence
         if local:
             # Display without Store URL button
-            rpc.update(details=details,state=state,small_image=small_image,large_image=assetName,large_text=details,small_text=small_text,start=start,end=end)
+            rpc.update(details=details,state=state,large_image=assetName,large_text=details,start=start,end=end)
         else:
             # Update RPC with Store URL button included
-            rpc.update(details=details,state=state,small_image=small_image,large_image=assetName,large_text=trackname,small_text=small_text,start=start,end=end,buttons=[{"label": "View in Store", "url": url}])
+            rpc.update(details=details,state=state,large_image=assetName,large_text=details,start=start,end=end,buttons=[{"label": "View in Store", "url": url}])
     # If the song is paused
     elif status == 2:
         details = f"Paused - {trackname}"
-        small_image = "pause"
-        small_text = "Currently paused"
         # Update Rich Presence
         if local:
             # Display without Store URL button
-            rpc.update(details=details,state=state,small_image=small_image,large_image=assetName,large_text=trackname,small_text=small_text)
+            rpc.update(details=details,state=state,large_image=assetName,large_text=details)
         else:
             # Update RPC with Store URL button included
-            rpc.update(details=details,state=state,small_image=small_image,large_image=assetName,large_text=trackname,small_text=small_text,buttons=[{"label": "View in Store", "url": url}])
+            rpc.update(details=details,state=state,large_image=assetName,large_text=details,buttons=[{"label": "View in Store", "url": url}])
     # If the song is stopped (rather, anything else)
     else:
         cached_track = ""
         # Update Rich Presence with non-dynamic data
-        rpc.update(details="Stopped",state="Nothing is currently playing",small_image="stop",large_image=assetName,large_text="There's nothing here!",small_text="Currently stopped")
+        rpc.update(details="Stopped",state="Nothing is currently playing",large_image=assetName,large_text="There's nothing here!")
 
 # Run update loop on a separate thread so the menu bar app can run on the main thread
 class BackgroundUpdate(Thread):
