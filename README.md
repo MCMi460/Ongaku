@@ -5,8 +5,8 @@ A port of **[Ongaku](https://github.com/spotlightishere/Ongaku)** to Python. Why
 
 A simple application providing the now playing state from iTunes (or the Music app) as RPC in Discord via [PyPresence](https://github.com/qwertyquerty/pypresence).
 
-![screenshot_2](/images/screenshot2.png?raw=true)
 ![screenshot_1](/images/screenshot1.png?raw=true)
+
 ## How to use
 Unzip and open the latest x86_64 version from the [releases tab](https://github.com/MCMi460/Ongaku/releases)
 ## How to build
