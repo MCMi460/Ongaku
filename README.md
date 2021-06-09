@@ -1,9 +1,12 @@
-# ![screenshot](/build/AppIcon.iconset/icon_32x32.png?raw=true) Ongaku
+# ![icon](/images/AppIcon.iconset/icon_32x32.png?raw=true) Ongaku
 _You know, [ongaku](https://jisho.org/word/%E9%9F%B3%E6%A5%BD)._
 
 A port of **[Ongaku](https://github.com/spotlightishere/Ongaku)** to Python. Why? I don't know.
 
 A simple application providing the now playing state from iTunes (or the Music app) as RPC in Discord via [PyPresence](https://github.com/qwertyquerty/pypresence).
+
+![screenshot_2](/images/screenshot2.png?raw=true)
+![screenshot_1](/images/screenshot1.png?raw=true)
 ## How to use
 Unzip and open the latest x86_64 version from the [releases tab](https://github.com/MCMi460/Ongaku/releases)
 ## How to build
