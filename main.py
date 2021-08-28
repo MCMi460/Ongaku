@@ -14,7 +14,10 @@ else:
     from subprocess import run # This will allow us to execute Apple Script
 
 # Get MacOS version
-ver = float(mac_ver()[0])
+ver = mac_ver()[0]
+if ver.count('.') > 1:
+    ver = ver.split(".")[0] + ver.split(".")[1].replace(".","")
+ver = float(ver)
 
 # Set default appname we're using for grabbing music data with Apple Script
 appName = "Music"
