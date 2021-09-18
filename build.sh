@@ -1,7 +1,7 @@
-curl https://codeload.github.com/MCMi460/Ongaku/zip/refs/heads/main -o Ongaku.zip
-unzip Ongaku.zip
+curl https://api.github.com/repos/MCMi460/Ongaku/zipball/main -o Ongaku.zip -L
+unzip Ongaku.zip -d ./Ongaku
 rm Ongaku.zip
-cd Ongaku-main
+cd ./Ongaku/*/
 python3 -m venv vpy
 source vpy/bin/activate
 python -m pip install -r requirements.txt py2app
