@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<script>
+  window.onload = () => {
+    const fragment = new URLSearchParams(window.location.hash.slice(1));
+    var [lyrics,song,state] = [fragment.get('lyrics'), fragment.get('song'), fragment.get('state')];
+    if ([lyrics,song,state].includes(null)) {
+      document.getElementById('song').innerText += `Nothing!`;
+      document.getElementById('lyrics').innerText = `Nothing's playing!`;
+      return;
+    };
+    lyrics = decodeURI(encodeURI(lyrics).split('%0D').join('\n'));
+    document.getElementById('song').innerText += `${song}`;
+    console.log(lyrics);
+    $("#lyrics").html(`${lyrics}`);
+    $.getJSON(`https://itunes.apple.com/search?term=${song.split(' ').join('+')}+${state.split(' ').join('+')}`, function(data) {
+      document.getElementById('song_link').href = `${data.results[0].trackViewUrl}`;
+    });
+  };
+  function copy() {
+    var copyText = document.getElementById("lyrics");
+    var temp = document.createElement("textarea");
+    document.body.appendChild(temp);
+    temp.value= copyText.innerText
+    temp.select();
+    document.execCommand("copy");
+    document.body.removeChild(temp);
+ };
+</script>
+<style>
+  body {
+    background: #F33353;
+  }
+  a {
+    color: #000;
+    text-decoration: none;
+  }
+  textarea {
+    overflow-x: scroll;
+    overflow-x: hidden;
+    resize: none;
+    background: transparent;
+    width: 100%;
+    height: 100%;
+    border: 0 none;
+    outline: none;
+    border-color: transparent;
+    text-align: center;
+    font-size: 1.5rem;
+  }
+
+  #gray-box {
+    display: block;
+    width: 100%;
+    left: 0%;
+    top: 0%;
+    height: 18em;
+    background-color: #2C2C2C;
+    position: absolute;
+  }
+
+  #text {
+    color: #fff;
+    margin-left: 10px;
+    font-family: 'Roboto Mono', monospace;
+  }
+
+  #song,
+  #song a {
+    color: #F33353;
+  }
+
+  #lyric-box {
+    width: 50%;
+    height: 30%;
+    color: #2658e0!important;
+    background-color: #6d6d6e;
+    border: 10px solid #000;
+    border-radius: 25px;
+    font-size: .5em;
+    text-align: center;
+  } #token-box a {
+    color: #2451c9!important;
+  }
+
+  #red-area{
+    margin-top: 23em;
+  }
+
+  #image {
+    width: 256px;
+    height: 256px;
+  }
+
+  #home {
+    color: #21c0ff;
+  }
+
+  #text2 {
+    font-family: 'Roboto Mono', monospace;
+  }
+</style>
+<html>
+  <head>
+    <title>Ongaku</title>
+    <!-- jQuery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  </head>
+  <body>
+    <center>
+    <div id="gray-box">
+      <div id="text">
+        <h1>Apple Music</h1>
+        <h2>Currently playing</h2>
+        <a href="/" id="song_link"><h1 id="song"></h1></a>
+        <h3>Lyrics:</h3>
+      </div>
+      <div id="lyric-box">
+        <textarea readonly id="lyrics"></textarea>
+      </div>
+    </div>
+    <div id="red-area">
+      <div id="text2">
+        <a href="https://github.com/MCMi460/Ongaku/releases"><h2>Click here to download Ongaku!</h2></a>
+      </div>
+    </div>
+  </center>
+  </body>
+</html>

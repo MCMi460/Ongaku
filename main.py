@@ -12,6 +12,7 @@ else:
     from time import sleep, time # This lets us get the exact time stamp as well as wait time
     from pypresence import Presence # This is what connects us to Discord and lets us change our status
     from subprocess import run # This will allow us to execute Apple Script
+    from urllib import parse # This is important for allowing us to encode our lyrics data properly
 
 # Get MacOS version
 ver = mac_ver()[0]
@@ -150,6 +151,17 @@ def get_cloud():
     """
     return process(cmd)
 
+# Get user-uploaded lyrics
+def get_lyrics():
+    cmd = """
+        on run
+    		tell application "%s"
+    			return lyrics of current track
+    		end tell
+        end run
+    """
+    return process(cmd)
+
 # Contains logic code that calls functions to grab data using Apple Script and updates the RPC controller with the data
 def update():
     # Grab playing status
@@ -158,6 +170,7 @@ def update():
     player_status = status
     # If the song is on the player get name, album, and artist
     if status > 0:
+        buttons = []
         local = False
         trackname = get_trackname()
         global cached_track
@@ -176,12 +189,16 @@ def update():
             try:
                 # Use Music's API to grab Store URL by searching for it. Apple Script cannot get the Store URL, so I had to code this alternate method
                 url = loads(get(f"https://itunes.apple.com/search?term={trackname.replace(' ','+')}+{trackname.replace(' ','+')}+{state.replace(', ',' ').replace(' ','+')}").content.decode('utf-8'))["results"][0]['trackViewUrl']
+                buttons.append({"label": "View in Store", "url": url})
             except:
                 # If it cannot get a song, then it will just update without the Store URL button
                 local = True
         else:
             # Song is either self-uploaded or otherwise.
             local = True
+        lyrics = get_lyrics()
+        if lyrics:
+            buttons.append({"label": "View Lyrics", "url": f"https://music.mi460.dev/#lyrics={parse.quote(lyrics)}&song={parse.quote(trackname)}&state={parse.quote(state)}"})
     # If the song is playing
     if status == 1:
         details = trackname
@@ -195,22 +212,22 @@ def update():
         global end
         end = start + (duration - pos)
         # Update Rich Presence
-        if local:
+        if not local or lyrics:
+            # Update RPC with Store URL button included
+            rpc.update(details=details,state=state,large_image=assetName,large_text=details,start=start,end=end,buttons=buttons)
+        else:
             # Display without Store URL button
             rpc.update(details=details,state=state,large_image=assetName,large_text=details,start=start,end=end)
-        else:
-            # Update RPC with Store URL button included
-            rpc.update(details=details,state=state,large_image=assetName,large_text=details,start=start,end=end,buttons=[{"label": "View in Store", "url": url}])
     # If the song is paused
     elif status == 2:
         details = f"Paused - {trackname}"
         # Update Rich Presence
-        if local:
+        if not local or lyrics:
+            # Update RPC with Store URL button included
+            rpc.update(details=details,state=state,large_image=assetName,large_text=details,buttons=buttons)
+        else:
             # Display without Store URL button
             rpc.update(details=details,state=state,large_image=assetName,large_text=details)
-        else:
-            # Update RPC with Store URL button included
-            rpc.update(details=details,state=state,large_image=assetName,large_text=details,buttons=[{"label": "View in Store", "url": url}])
     # If the song is stopped (rather, anything else)
     else:
         cached_track = ""
@@ -298,7 +315,7 @@ class OngakuApp(App):
         except:
             pass
         try:
-            rpc.connect()
+            connect()
             alert("Connected to Discord!\n(You may have to restart Discord)")
         except Exception as e:
             alert(f"Failed to connect:\n\"{e}\"")
