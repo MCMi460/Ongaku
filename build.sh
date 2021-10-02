@@ -7,4 +7,4 @@ source vpy/bin/activate
 python -m pip install -r requirements.txt py2app
 python setup.py py2app
 open ./dist
-rm ../build.sh
+rm ../../build.sh
