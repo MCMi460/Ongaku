@@ -1,4 +1,9 @@
+# MacOS Exclusions
 .DS_Store
-vpy
+
+# Python-based Exclusions
+venv
 __pycache__
+
+# py2app Exclusions
 dist
