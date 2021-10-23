@@ -198,7 +198,7 @@ def update():
             local = True
         lyrics = get_lyrics()
         if lyrics:
-            buttons.append({"label": "View Lyrics", "url": f"https://music.mi460.dev/#lyrics={parse.quote(lyrics)}&song={parse.quote(trackname)}&state={parse.quote(state)}"})
+            buttons.append({"label": "View Lyrics", "url": f"https://music.mi460.dev/#api={type == 'purchased' or type == 'subscription'}&lyrics={parse.quote(lyrics)}&song={parse.quote(trackname)}&state={parse.quote(state)}"})
     # If the song is playing
     if status == 1:
         details = trackname

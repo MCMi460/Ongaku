@@ -2,19 +2,20 @@
 <script>
   window.onload = () => {
     const fragment = new URLSearchParams(window.location.hash.slice(1));
-    var [lyrics,song,state] = [fragment.get('lyrics'), fragment.get('song'), fragment.get('state')];
-    if ([lyrics,song,state].includes(null)) {
+    var [api,lyrics,song,state] = [fragment.get('api'), fragment.get('lyrics'), fragment.get('song'), fragment.get('state')];
+    if ([api,lyrics,song,state].includes(null)) {
       document.getElementById('song').innerText += `Nothing!`;
       document.getElementById('lyrics').innerText = `Nothing's playing!`;
       return;
     };
     lyrics = decodeURI(encodeURI(lyrics).split('%0D').join('\n'));
     document.getElementById('song').innerText += `${song}`;
-    console.log(lyrics);
-    $("#lyrics").html(`${lyrics}`);
-    $.getJSON(`https://itunes.apple.com/search?term=${song.split(' ').join('+')}+${state.split(' ').join('+')}`, function(data) {
-      document.getElementById('song_link').href = `${data.results[0].trackViewUrl}`;
-    });
+    $('#lyrics').html(`${lyrics}`);
+    if (api == 'True') {
+      $.getJSON(`https://itunes.apple.com/search?term=${song.split(' ').join('+')}+${state.split(' ').join('+')}`, function(data) {
+        document.getElementById('song_link').href = `${data.results[0].trackViewUrl}`;
+      });
+    };
   };
   function copy() {
     var copyText = document.getElementById("lyrics");
