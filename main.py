@@ -167,6 +167,7 @@ def update():
     # Grab playing status
     status = get_status()
     global player_status
+    image = assetName
     player_status = status
     # If the song is on the player get name, album, and artist
     if status > 0:
@@ -188,7 +189,10 @@ def update():
         if type == "purchased" or type == "subscription":
             try:
                 # Use Music's API to grab Store URL by searching for it. Apple Script cannot get the Store URL, so I had to code this alternate method
-                url = loads(get(f"https://itunes.apple.com/search?term={trackname.replace(' ','+')}+{trackname.replace(' ','+')}+{state.replace(', ',' ').replace(' ','+')}").content.decode('utf-8'))["results"][0]['trackViewUrl']
+                data = loads(get(f"https://itunes.apple.com/search?term={trackname.replace(' ','+')}+{trackname.replace(' ','+')}+{state.replace(', ',' ').replace(' ','+')}").content.decode('utf-8'))["results"][0]
+                url = data['trackViewUrl']
+                try:image = data['artworkUrl100']
+                except:image = assetName
                 buttons.append({"label": "View in Store", "url": url})
             except:
                 # If it cannot get a song, then it will just update without the Store URL button
@@ -214,10 +218,10 @@ def update():
         # Update Rich Presence
         if not local or lyrics:
             # Update RPC with Store URL button included
-            rpc.update(details=details,state=state,large_image=assetName,large_text=details,start=start,end=end,buttons=buttons)
+            rpc.update(details=details,state=state,large_image=image,large_text=details,start=start,end=end,buttons=buttons)
         else:
             # Display without Store URL button
-            rpc.update(details=details,state=state,large_image=assetName,large_text=details,start=start,end=end)
+            rpc.update(details=details,state=state,large_image=image,large_text=details,start=start,end=end)
     # If the song is paused
     elif status == 2:
         details = f"Paused - {trackname}"
