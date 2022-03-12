@@ -118,12 +118,23 @@ def get_trackname():
     """
     return process(cmd)
 
-# Get info will return the album and artist of the current track
-def get_info():
+# Get artist will return the artist of the current track
+def get_artist():
     cmd = """
         on run
     		tell application "%s"
-                return {album,artist} of current track
+                return artist of current track
+    		end tell
+        end run
+    """
+    return process(cmd)
+
+# Get album will return the album of the current track
+def get_album():
+    cmd = """
+        on run
+    		tell application "%s"
+                return album of current track
     		end tell
         end run
     """
@@ -174,13 +185,15 @@ def update():
         buttons = []
         local = False
         trackname = get_trackname()
+        artist = get_artist()
+        album = get_album()
         global cached_track
         cached_track = trackname
         if len(trackname) < 2:
             trackname = "Song has no name assigned"
         elif len(trackname) > 128:
             trackname = trackname[:127]
-        state = get_info()
+        state = album
         if len(state) < 2:
             state = "Song has no artist assigned"
         elif len(state) > 128:
@@ -205,7 +218,7 @@ def update():
             buttons.append({"label": "View Lyrics", "url": f"https://music.mi460.dev/#api={type == 'purchased' or type == 'subscription'}&lyrics={parse.quote(lyrics)}&song={parse.quote(trackname)}&state={parse.quote(state)}"})
     # If the song is playing
     if status == 1:
-        details = trackname
+        details = trackname + ' - ' + artist
         # Get current epoch time
         global start
         start = round(time())
@@ -224,19 +237,19 @@ def update():
             rpc.update(details=details,state=state,large_image=image,large_text=details,start=start,end=end)
     # If the song is paused
     elif status == 2:
-        details = f"Paused - {trackname}"
+        details = f"Paused - {trackname + ' - ' + artist}"
         # Update Rich Presence
         if not local or lyrics:
             # Update RPC with Store URL button included
-            rpc.update(details=details,state=state,large_image=assetName,large_text=details,buttons=buttons)
+            rpc.update(details=details,state=state,large_image=image,large_text=details,buttons=buttons)
         else:
             # Display without Store URL button
-            rpc.update(details=details,state=state,large_image=assetName,large_text=details)
+            rpc.update(details=details,state=state,large_image=image,large_text=details)
     # If the song is stopped (rather, anything else)
     else:
         cached_track = ""
         # Update Rich Presence with non-dynamic data
-        rpc.update(details="Stopped",state="Nothing is currently playing",large_image=assetName,large_text="There's nothing here!")
+        rpc.update(details="Stopped",state="Nothing is currently playing",large_image=image,large_text="There's nothing here!")
 
 # Run update loop on a separate thread so the menu bar app can run on the main thread
 class BackgroundUpdate(Thread):
