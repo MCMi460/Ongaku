@@ -19,7 +19,7 @@ chmod -R 777 build.sh
 ./build.sh
 ```
 ---
-If you have any issues, [contact me here](https://mi460.dev/bugs).
+If you have any issues, [make an issue](https://github.com/MCMi460/Ongaku/issues/new).
 
 ### Credits
 [Spotlight](https://github.com/spotlightishere) for (unknowingly and unwillingly) letting me use their code as reference for this.
