@@ -1,9 +1,12 @@
 # MacOS Exclusions
 .DS_Store
 
-# Python-based Exclusions
-venv
-__pycache__
+# Python Exclusions
+venv/
+__pycache__/
 
 # py2app Exclusions
-dist
+dist/
+build/
+.eggs/
+setup.py

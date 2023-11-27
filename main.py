@@ -1,326 +1,301 @@
-from sys import platform, exit # This gives us our current OS' information
+import sys
 
-# Make sure platform is MacOS
-if platform.startswith("darwin") != True:
-    exit(f"There is not currently a {platform} version supported, please use a different application.")
-else:
-    from rumps import App, clicked, alert, notification, quit_application # This module adds menu bar support
-    from platform import mac_ver # Get MacOS version
-    from requests import get # This lets us receive website data
-    from json import loads # This is useful for formatting some web data in the future
-    from threading import Thread # This allows us to run multiple blocking processes at once
-    from time import sleep, time # This lets us get the exact time stamp as well as wait time
-    from pypresence import Presence # This is what connects us to Discord and lets us change our status
-    from subprocess import run # This will allow us to execute Apple Script
-    from urllib import parse # This is important for allowing us to encode our lyrics data properly
+if not sys.platform.startswith('darwin'):
+    sys.exit('Non-MacOS is not yet supported. Sorry!')
 
-# Get MacOS version
-ver = mac_ver()[0]
-if ver.count('.') > 1:
-    ver = ver.split(".")[0] + ver.split(".")[1].replace(".","")
-ver = float(ver)
+import platform, os, json, time, threading, subprocess, urllib, typing, enum, datetime
+import rumps, requests, pypresence
 
-# Set default appname we're using for grabbing music data with Apple Script
-appName = "Music"
+ver = platform.mac_ver()[0].split('.')
+ver = float('.'.join((ver[0], ''.join(ver[1:]))))
 
-# If Big Sur 11.3 or later, then use the updated Apple Music logo
+appName = 'Music'
+
+if 11.3 > ver >= 11.0:
+    sys.exit('Apple Script is broken before Big Sur 11.3 - please update to use this program.')
 if ver >= 10.16:
-    assetName = "big_sur_logo"
-# If Big Sur version is below 11.3, quit program due to issues grabbing music data with Apple Script before 11.3
-elif 11.3 > ver >= 11.0:
-    exit("Apple Script is broken before Big Sur 11.3 - please update to use this program.")
-# Don't know what this is about, but I wanted to port Spotlight's code to Python exactly, so I kept this
+    assetName = 'big_sur_logo'
 elif ver == 10.15:
-    assetName = "music_logo"
-# Use old iTunes logo and appname
+    assetName = 'music_logo'
 else:
-    appName = "iTunes"
-    assetName = "itunes_logo"
+    appName = 'iTunes'
+    assetName = 'itunes_logo'
 
-# Set Discord Rich Presence ID
-rpc = Presence('402370117901484042')
+# Working directory
+path = os.path.expanduser('~/Library/Application Support/Ongaku')
+if not os.path.isdir(path):
+    os.mkdir(path)
 
-from os.path import expanduser # Get home directory path
-from datetime import datetime # Lets us get current time and date
+class Script:
+    class State(enum.Enum):
+        STOPPED = 0
+        PLAYING = 1
+        PAUSED = 2
+        FAST_FORWARDING = 3
+        REWINDING = 4
 
-path = expanduser("~/Library/Application Support/Ongaku")
+    class Cloud_Status(enum.Enum):
+        UNKNOWN = 0
+        PURCHASED = 1
+        MATCHED = 2
+        UPLOADED = 3
+        INELIGIBLE = 4
+        REMOVED = 5
+        ERROR = 6
+        DUPLICATE = 7
+        SUBSCRIPTION = 8
+        PRERELEASE = 9
+        NO_LONGER_AVAILABLE = 10
+        NOT_UPLOADED = 11
 
-def log_error(error):
-    print(error)
-    while True:
+    class Track:
+        def __init__(self, **kwargs) -> None:
+            for key in kwargs.keys():
+                self.__dict__[key] = kwargs[key]
+
+    def _process(cmd) -> str:
+        return subprocess.run(
+            [
+                'osascript',
+                '-e',
+                cmd % appName
+            ],
+            capture_output = True
+        ).stdout.decode('utf-8').rstrip()
+
+    @property
+    def song(self) -> 'Script.Track':
+        position, duration = Script._get_duration()
+        return Script.Track(
+            ID = Script._get_ID(),
+            State = Script._get_state(),
+            Name = Script._get_trackname(),
+            Album = Script._get_album(),
+            Artist = Script._get_artist(),
+            #Lyrics = Script._get_lyrics(),
+            Position = position,
+            Duration = duration,
+            Cloud_Status = Script._get_cloud(),
+        )
+
+    # database ID
+    def _get_ID() -> typing.Optional[int]:
+        cmd = """
+            on run
+                tell application "%s"
+                    return database ID of current track
+                end tell
+            end run
+        """
+        response = Script._process(cmd)
+        return int(response) if response else None
+
+    # stopped, paused, playing
+    def _get_state() -> 'Script.State':
+        cmd = """
+            on run
+        		tell application "%s"
+        			return player state
+        		end tell
+            end run
+        """
+        return Script.State[
+            Script._process(cmd)
+            .upper()
+            .replace(' ', '_')
+        ]
+
+    # name
+    def _get_trackname() -> str:
+        cmd = """
+            on run
+        		tell application "%s"
+        			return name of current track
+        		end tell
+            end run
+        """
+        return Script._process(cmd)
+
+    # album
+    def _get_album() -> str:
+        cmd = """
+            on run
+        		tell application "%s"
+                    return album of current track
+        		end tell
+            end run
+        """
+        return Script._process(cmd)
+
+    # artist
+    def _get_artist() -> str:
+        cmd = """
+            on run
+        		tell application "%s"
+                    return artist of current track
+        		end tell
+            end run
+        """
+        return Script._process(cmd)
+
+    # lyrics ... deprecated
+    def _get_lyrics() -> str:
+        cmd = """
+            on run
+        		tell application "%s"
+        			return lyrics of current track
+        		end tell
+            end run
+        """
+        return Script._process(cmd)
+
+    # position and duration
+    def _get_duration() -> typing.Tuple[typing.Optional[float], typing.Optional[float]]:
+        cmd = """
+            on run
+        		tell application "%s"
+        			return player position & duration of current track
+        		end tell
+            end run
+        """
+        try: return tuple(map(float, Script._process(cmd).split(', ')))
+        except: return None, None
+
+    # cloud status
+    def _get_cloud() -> typing.Optional['Script.Cloud_Status']:
+        cmd = """
+            on run
+        		tell application "%s"
+        			return cloud status of current track
+        		end tell
+            end run
+        """
         try:
-            with open(f'{path}/error.txt',"a") as append:
-                append.write(f'[{datetime.now().strftime("%Y/%m/%d %H:%M:%S")}] {error}\n')
-            break
-        except:
-            from os import mkdir # Create the directory
-            mkdir(path)
-            continue
+            return Script.Cloud_Status[
+                Script._process(cmd)
+                .upper()
+                .replace(' ', '_')
+            ]
+        except KeyError:
+            return None
 
-def connect():
-    # Set fails variable to 0
-    fails = 0
+    # artwork ... deprecated for now
+    def _get_artwork() -> str:
+        cmd = """
+            on run
+            	tell application "%s"
+            		return {format, raw data} of first artwork of current track & database ID of current track
+            	end tell
+            end run
+        """
+        response = Script._process(cmd)
+        if response:
+            format, data, id = response.split(', ')
+            if 'picture' in format:
+                format = format.rstrip(' picture')
+            else:
+                format = format.lstrip('«class ').rstrip(' »')
+            coversPath = os.path.join(path, 'covers')
+            filePath = os.path.join(coversPath, id + '.' + format)
+            if not os.path.isdir(coversPath):
+                os.mkdir(coversPath)
+            if not os.path.isfile(filePath):
+                with open(filePath, 'wb+') as file:
+                    file.write(bytes.fromhex(data.lstrip('«data tdta').rstrip('»')))
+        return response
 
-    while True:
-        # Attempt to connect to Discord. Will wait until it connects
-        try:
-            rpc.connect()
-            break
-        except Exception as e:
-            sleep(0.1)
-            fails += 1
-            if fails > 500:
-                # If program fails 500 consecutive times in a row to connect, then send a notification with the exception
-                notification("Error in Ongaku", "Make an issue if error persists", f"\"{e}\"")
-                log_error(e)
-                exit(f"Error, failed after 500 attempts\n\"{e}\"")
-            continue
-
-connect()
-
-try:
-    # Sometimes PyPresence returns a Client ID error even if we already connected, so this will try to connect again
-    rpc.connect()
-except:
-    exit("Failed to connect")
-
-# All of these 'get functions' use Python subprocess-ing to pipe Apple Script data and get it
-# Then the fancy stuff when returning the function is just to format the string to look proper
-
-def process(cmd):
-    return run(['osascript', '-e', cmd % appName], capture_output=True).stdout.decode('utf-8').rstrip()
-
-# Get status will return 1 if Music is playing, 2 if Music is paused, and 0 if Music is stopped
-def get_status():
-    cmd = """
-        on run
-    		tell application "%s"
-    			if player state is playing then
-    				return "1"
-                else if player state is paused then
-                    return "2"
-                else
-                return "0"
-    			end if
-    		end tell
-        end run
-    """
-    return int(process(cmd))
-
-# Get trackname will return the name of the current track
-def get_trackname():
-    cmd = """
-        on run
-    		tell application "%s"
-    			return name of current track
-    		end tell
-        end run
-    """
-    return process(cmd)
-
-# Get info will return the album and artist of the current track
-def get_info():
-    cmd = """
-        on run
-    		tell application "%s"
-                return {album,artist} of current track
-    		end tell
-        end run
-    """
-    return process(cmd)
-
-# Get duration returns the Music player's position and the duration of the current track
-def get_duration():
-    cmd = """
-        on run
-    		tell application "%s"
-    			return player position & duration of current track
-    		end tell
-        end run
-    """
-    return process(cmd)
-
-# Find out whether this is a user-uploaded song or otherwise
-def get_cloud():
-    cmd = """
-        on run
-    		tell application "%s"
-    			return cloud status of current track
-    		end tell
-        end run
-    """
-    return process(cmd)
-
-# Get user-uploaded lyrics
-def get_lyrics():
-    cmd = """
-        on run
-    		tell application "%s"
-    			return lyrics of current track
-    		end tell
-        end run
-    """
-    return process(cmd)
-
-# Contains logic code that calls functions to grab data using Apple Script and updates the RPC controller with the data
-def update():
-    # Grab playing status
-    status = get_status()
-    global player_status
-    player_status = status
-    # If the song is on the player get name, album, and artist
-    if status > 0:
-        buttons = []
-        local = False
-        trackname = get_trackname()
-        global cached_track
-        cached_track = trackname
-        if len(trackname) < 2:
-            trackname = "Song has no name assigned"
-        elif len(trackname) > 128:
-            trackname = trackname[:127]
-        state = get_info()
-        if len(state) < 2:
-            state = "Song has no artist assigned"
-        elif len(state) > 128:
-            state = state[:127]
-        type = get_cloud()
-        if type == "purchased" or type == "subscription":
-            try:
-                # Use Music's API to grab Store URL by searching for it. Apple Script cannot get the Store URL, so I had to code this alternate method
-                url = loads(get(f"https://itunes.apple.com/search?term={trackname.replace(' ','+')}+{trackname.replace(' ','+')}+{state.replace(', ',' ').replace(' ','+')}").content.decode('utf-8'))["results"][0]['trackViewUrl']
-                buttons.append({"label": "View in Store", "url": url})
-            except:
-                # If it cannot get a song, then it will just update without the Store URL button
-                local = True
-        else:
-            # Song is either self-uploaded or otherwise.
-            local = True
-        lyrics = get_lyrics()
-        if lyrics:
-            buttons.append({"label": "View Lyrics", "url": f"https://music.mi460.dev/#api={type == 'purchased' or type == 'subscription'}&lyrics={parse.quote(lyrics)}&song={parse.quote(trackname)}&state={parse.quote(state)}"})
-    # If the song is playing
-    if status == 1:
-        details = trackname
-        # Get current epoch time
-        global start
-        start = round(time())
-        stamp = get_duration()
-        # Format position and duration data
-        pos = round(float(stamp.split(", ")[0]))
-        duration = round(float(stamp.split(", ")[1]))
-        global end
-        end = start + (duration - pos)
-        # Update Rich Presence
-        if not local or lyrics:
-            # Update RPC with Store URL button included
-            rpc.update(details=details,state=state,large_image=assetName,large_text=details,start=start,end=end,buttons=buttons)
-        else:
-            # Display without Store URL button
-            rpc.update(details=details,state=state,large_image=assetName,large_text=details,start=start,end=end)
-    # If the song is paused
-    elif status == 2:
-        details = f"Paused - {trackname}"
-        # Update Rich Presence
-        if not local or lyrics:
-            # Update RPC with Store URL button included
-            rpc.update(details=details,state=state,large_image=assetName,large_text=details,buttons=buttons)
-        else:
-            # Display without Store URL button
-            rpc.update(details=details,state=state,large_image=assetName,large_text=details)
-    # If the song is stopped (rather, anything else)
-    else:
-        cached_track = ""
-        # Update Rich Presence with non-dynamic data
-        rpc.update(details="Stopped",state="Nothing is currently playing",large_image=assetName,large_text="There's nothing here!")
-
-# Run update loop on a separate thread so the menu bar app can run on the main thread
-class BackgroundUpdate(Thread):
-    def run(self,*args,**kwargs):
-        global call_update
-        # Set fails variable to 0
-        fails = 0
-        # Loop for the rest of the runtime
-        while True:
-            # Only run when app is activated
-            if activated:
-                # The following logic statements are to check if the song playing has changed. If so, it will queue it up for Discord to update
-                # Check if track playing is different
-                if cached_track != str(get_trackname()):
-                    call_update = True
-                # Check if user changed the player state
-                elif player_status != get_status():
-                    call_update = True
-                elif player_status == 1:
-                    stamp = get_duration()
-                    # If player status is set to playing, check if the start vs end time is within 15 (or so) seconds of what it's supposed to be. If not, then update
-                    if round(end - start) - round(float(stamp.split(", ")[1]) - float(stamp.split(", ")[0])) not in range(15):
-                        call_update = True
-                if call_update:
-                    # Call update function
-                    try:
-                        update()
-                        fails = 0
-                    except Exception as e:
-                        notification("Error in Ongaku", "Make an issue if error persists", f"\"{e}\"")
-                        log_error(e)
-                        fails += 1
-                        if fails > 5:
-                            print(f"Error, failed after 5 attempts\n\"{e}\"")
-                            quit_application()
-                            exit()
-                            # Here, we just use everything we can to get the application to stop running!
-                    call_update = False
-                else:
-                    # Wait one second
-                    sleep(1)
-
-# Make sure it runs on start
-activated = True
-# Set variables for slight optimizations to code
-cached_track = ""
-player_status = ""
-start = 0
-end = 0
-call_update = True
-
-# Grab class and start it
-background_update = BackgroundUpdate()
-background_update.start()
-
-# Define menu bar object and run it
-class OngakuApp(App):
+class Client(rumps.App):
     def __init__(self):
-        super(OngakuApp, self).__init__("Ongaku",title="♫")
-        self.menu = ["Disable", "Reconnect"]
-    # Make an activate button
-    @clicked("Disable")
-    def button(self, sender):
-        global activated
-        activated = not activated
-        global call_update
-        if sender.title == "Disable":
-            sender.title = "Enable"
-            rpc.clear()
-            call_update = False
-        else:
-            sender.title = "Disable"
-            call_update = True
-    # Make a reconnect button
-    @clicked("Reconnect")
-    def reconnect(self, _):
-        # Attempt to connect to Discord, and if failed, it will output an alert with the exception
-        try:
-            rpc.clear()
-        except:
-            pass
-        try:
-            connect()
-            alert("Connected to Discord!\n(You may have to restart Discord)")
-        except Exception as e:
-            alert(f"Failed to connect:\n\"{e}\"")
-            log_error(e)
+        self.rpc = None
+        self.savedResults = {}
+        self.allowJoiners = False
+        self.connect()
+        threading.Thread(target = self.routine, daemon = True).start()
 
-# Make sure process is the main script and run status bar app
-if __name__ == "__main__":
-    OngakuApp().run()
+        super().__init__('Ongaku', title = '♫')
+
+    def create_instance(self, clientID:str = '402370117901484042', pipe:int = 0):
+        self.rpc = pypresence.Presence(clientID, pipe = pipe)
+
+    def connect(self):
+        if not self.rpc:
+            self.create_instance()
+        try:
+            self.rpc.connect()
+        except Exception as e:
+            self.handle_error(e, True)
+
+    def handle_error(self, error:Exception, quit:bool = False):
+        with open(path + '/error.txt', 'a') as file:
+            file.write('[%s] %s\n' % (datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S'), error))
+        if quit:
+            rumps.alert('Error in Ongaku', '"%s"' % error)
+            raise error
+            sys.exit()
+        print(error)
+        rumps.notification('Error in Ongaku', 'Make an issue if error persists', '"%s"' % error)
+
+    def routine(self):
+        while True:
+            track = Script().song
+            # Script._get_artwork()
+            # Add local artwork loading at a later date
+            try:
+                self.update(track)
+            except Exception as err:
+                self.handle_error(err, True)
+            time.sleep(2)
+
+    def update(self, track:dict):
+        dict = {
+            'large_image': assetName,
+            'large_text': appName,
+        }
+        if track.State != Script.State.STOPPED:
+            dict['details'] = track.Name.ljust(2, '_')[:127]
+            dict['state'] = ', '.join(filter(lambda str : str != '', [track.Artist, track.Album if not track.Album in (track.Name, track.Name + ' - Single') else '']))
+            if track.State == Script.State.PAUSED:
+                dict['state'] = 'Paused - ' + dict['state']
+            else:
+                dict['start'] = time.time()
+                dict['end'] = time.time() + (track.Duration - track.Position)
+            dict['state'] = dict['state'].ljust(2, '_')[:127]
+
+            if track.Cloud_Status in (
+                Script.Cloud_Status.PURCHASED,
+                Script.Cloud_Status.SUBSCRIPTION
+            ):
+                searchString = 'https://itunes.apple.com/search?term=' + '+'.join([track.Name, track.Artist]).replace(' ', '+')
+                if searchString in self.savedResults:
+                    store = self.savedResults[searchString]
+                else:
+                    store = requests.get(searchString).json()['results']
+                    self.savedResults[searchString] = store
+                if len(store) > 0:
+                    if not self.allowJoiners:
+                        dict['buttons'] = [{
+                            'label': 'View in Store',
+                            'url': store[0]['trackViewUrl'],
+                        },]
+                        dict['large_image'] = store[0]['artworkUrl100']
+                        dict['large_text'] = dict['details']
+                        # Lyrics support is deprecated
+                        #if track.Lyrics != '':
+                        #    dict['buttons'].append(
+                        #        {
+                        #            'label': 'View Lyrics',
+                        #            'url':
+                        #                'https://music.mi460.dev/#api=True&lyrics='
+                        #                + urllib.parse.quote(track.Lyrics)
+                        #                + '&song='
+                        #                + urllib.parse.quote(track.Name)
+                        #                + '&state='
+                        #                + urllib.parse.quote(dict['state'])
+                        #        }
+                        #    )
+            self.rpc.update(**dict)
+        else:
+            self.rpc.clear()
+
+if __name__ == '__main__':
+    Client().run()
