@@ -66,75 +66,47 @@ class Script:
 
     @property
     def song(self) -> 'Script.Track':
-        position, duration = Script._get_position()
-        return Script.Track(
-            ID = Script._get_ID(),
-            State = Script._get_state(),
-            Name = Script._get_trackname(),
-            Album = Script._get_album(),
-            Artist = Script._get_artist(),
-            #Lyrics = Script._get_lyrics(),
-            Position = position,
-            Duration = duration,
-            Cloud_Status = Script._get_cloud(),
-        )
+        # typing.Tuple[typing.Tuple[int, str, str, str, float, 'Script.Cloud_Status', 'Script.State', float]]
+        try:
+            ID, Name, Album, Artist, Duration, Cloud_Status, State, Position = Script._script().split(', ')
+            ID = int(ID)
+            Duration = float(Duration)
+            Cloud_Status = Script.Cloud_Status[
+                Cloud_Status
+                .upper()
+                .replace(' ', '_')
+            ]
+            State = Script.State[
+                State
+                .upper()
+                .replace(' ', '_')
+            ]
+            Position = float(Position)
+        except ValueError:
+            ID = Name = Album = Artist = Duration = Cloud_Status = Position = None
+            State = Script.State.STOPPED
+        except Exception as err:
+            raise err # Intentionally raise exception
+        finally:
+            return Script.Track(
+                ID = ID,
+                Name = Name,
+                Album = Album,
+                Artist = Artist,
+                Duration = Duration,
+                Cloud_Status = Cloud_Status,
+                State = State,
+                Position = Position,
+                #Lyrics = Script._get_lyrics(),
+            )
 
-    # database ID
-    def _get_ID() -> typing.Optional[int]:
+    # get all necessary fields
+    def _script() -> str:
         cmd = """
             on run
                 tell application "%s"
-                    return database ID of current track
+                    return {database ID, name, album, artist, duration, cloud status} of current track & player state & player position
                 end tell
-            end run
-        """
-        response = Script._process(cmd)
-        return int(response) if response else None
-
-    # stopped, paused, playing
-    def _get_state() -> 'Script.State':
-        cmd = """
-            on run
-        		tell application "%s"
-        			return player state
-        		end tell
-            end run
-        """
-        return Script.State[
-            Script._process(cmd)
-            .upper()
-            .replace(' ', '_')
-        ]
-
-    # name
-    def _get_trackname() -> str:
-        cmd = """
-            on run
-        		tell application "%s"
-        			return name of current track
-        		end tell
-            end run
-        """
-        return Script._process(cmd)
-
-    # album
-    def _get_album() -> str:
-        cmd = """
-            on run
-        		tell application "%s"
-                    return album of current track
-        		end tell
-            end run
-        """
-        return Script._process(cmd)
-
-    # artist
-    def _get_artist() -> str:
-        cmd = """
-            on run
-        		tell application "%s"
-                    return artist of current track
-        		end tell
             end run
         """
         return Script._process(cmd)
@@ -161,36 +133,6 @@ class Script:
         """
         try: return tuple(map(float, Script._process(cmd).split(', ')))
         except: return None, None
-
-    # position and duration
-    def _get_position() -> typing.Tuple[typing.Optional[float], typing.Optional[float]]:
-        cmd = """
-            on run
-        		tell application "%s"
-        			return player position & duration of current track
-        		end tell
-            end run
-        """
-        try: return tuple(map(float, Script._process(cmd).split(', ')))
-        except: return None, None
-
-    # cloud status
-    def _get_cloud() -> typing.Optional['Script.Cloud_Status']:
-        cmd = """
-            on run
-        		tell application "%s"
-        			return cloud status of current track
-        		end tell
-            end run
-        """
-        try:
-            return Script.Cloud_Status[
-                Script._process(cmd)
-                .upper()
-                .replace(' ', '_')
-            ]
-        except KeyError:
-            return None
 
     # artwork ... deprecated for now
     def _get_artwork() -> str:
@@ -221,7 +163,7 @@ class Client(rumps.App):
     def __init__(self) -> None:
         self.rpc = None
         self.savedResults = {}
-        self.allowJoiners = False
+        self.allowJoiners = False # unfinished
         self.prevTrack = None
         self.metaCheckVar = 0
         self.connect()
@@ -281,7 +223,7 @@ class Client(rumps.App):
                     time.sleep(1)
                 except Exception as err:
                     self.handle_error(err, True)
-            time.sleep(0.5)
+            time.sleep(1)
 
     def update(self, track:Script.Track) -> None:
         dict = {
@@ -293,9 +235,13 @@ class Client(rumps.App):
             dict['state'] = ' - '.join(filter(lambda str : str != '', [track.Artist, track.Album if not track.Album in (track.Name, track.Name + ' - Single') else '']))
             if track.State == Script.State.PAUSED:
                 dict['state'] = 'Paused - ' + dict['state']
+                dict['small_image'] = 'pause'
+                dict['small_text'] = 'Paused'
             elif track.Position and track.Duration:
                 dict['start'] = time.time() + track.Position
                 dict['end'] = time.time() + (track.Duration - track.Position)
+                dict['small_image'] = 'play'
+                dict['small_text'] = 'Playing'
             dict['state'] = dict['state'].ljust(2, '_')[:127]
 
             if track.Cloud_Status in (
