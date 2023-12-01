@@ -4,7 +4,7 @@ import sys
 if not sys.platform.startswith('darwin'):
     sys.exit('Non-MacOS is not yet supported. Sorry!')
 
-import platform, os, json, time, threading, subprocess, urllib, typing, enum, datetime
+import platform, os, json, time, threading, subprocess, urllib, typing, enum, datetime, webbrowser, random
 import rumps, requests, pypresence
 
 ver = platform.mac_ver()[0].split('.')
@@ -163,7 +163,7 @@ class Client(rumps.App):
     def __init__(self) -> None:
         self.rpc = None
         self.savedResults = {}
-        self.allowJoiners = False # unfinished
+        self.allowJoiners = False #random.getrandbits(64)
         self.prevTrack = None
         self.metaCheckVar = 0
         self.connect()
@@ -171,14 +171,24 @@ class Client(rumps.App):
 
         super().__init__('Ongaku', icon = 'images/icon_light.png', template = True)
 
-    def create_instance(self, clientID:str = '402370117901484042', pipe:int = 0) -> None:
-        self.rpc = pypresence.Presence(clientID, pipe = pipe)
+    def create_instance(self, clientID:str = '402370117901484042') -> None:
+        for pipe in range(3):
+            try:
+                self.rpc = pypresence.Client(clientID, pipe = pipe)
+                return
+            except Exception as err:
+                pass
+        raise err
 
     def connect(self) -> None:
         if not self.rpc:
             self.create_instance()
         try:
-            self.rpc.connect()
+            self.rpc.start()
+            
+            if self.allowJoiners:
+                self.rpc.register_event('ACTIVITY_JOIN', self.join)
+                self.rpc.subscribe('ACTIVITY_JOIN')
         except Exception as e:
             self.handle_error(e, True)
 
@@ -191,6 +201,10 @@ class Client(rumps.App):
             sys.exit()
         print(error)
         rumps.notification('Error in Ongaku', 'Make an issue if error persists', '"%s"' % error)
+
+    def join(self, event:dict):
+        secret = json.loads(event['secret'])
+        webbrowser.open(secret['url'])
 
     def stateChange(self, track:Script.Track) -> bool:
         return (
@@ -209,7 +223,7 @@ class Client(rumps.App):
         while True:
             track = Script().song
 
-            if self.stateChange(track):
+            if self.stateChange(track) or self.allowJoiners:
                 self.prevTrack = track
                 try:
                     if track.State != Script.State.STOPPED:
@@ -255,13 +269,13 @@ class Client(rumps.App):
                     store = requests.get(searchString).json()['results']
                     self.savedResults[searchString] = store
                 if len(store) > 0:
+                    dict['large_image'] = store[0]['artworkUrl100']
+                    dict['large_text'] = dict['details']
                     if not self.allowJoiners:
                         dict['buttons'] = [{
                             'label': 'View in Store',
                             'url': store[0]['trackViewUrl'],
                         },]
-                        dict['large_image'] = store[0]['artworkUrl100']
-                        dict['large_text'] = dict['details']
                         # Lyrics support is deprecated
                         #if track.Lyrics != '':
                         #    dict['buttons'].append(
@@ -276,9 +290,16 @@ class Client(rumps.App):
                         #                + urllib.parse.quote(dict['state'])
                         #        }
                         #    )
-            self.rpc.update(**dict)
+                    else:
+                        dict['join'] = json.dumps({
+                            'url': store[0]['trackViewUrl'],
+                            'pos': track.Position,
+                        })
+                        dict['party_id'] = str(self.allowJoiners)
+                        dict['party_size'] = [1, 2]
+            self.rpc.set_activity(**dict)
         else:
-            self.rpc.clear()
+            self.rpc.clear_activity()
 
 if __name__ == '__main__':
     app = Client()
