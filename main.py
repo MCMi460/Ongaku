@@ -1,3 +1,4 @@
+ONGAKU_VER = 1.3
 import sys
 
 if not sys.platform.startswith('darwin'):
@@ -65,7 +66,7 @@ class Script:
 
     @property
     def song(self) -> 'Script.Track':
-        position, duration = Script._get_duration()
+        position, duration = Script._get_position()
         return Script.Track(
             ID = Script._get_ID(),
             State = Script._get_state(),
@@ -149,8 +150,20 @@ class Script:
         """
         return Script._process(cmd)
 
+    # start and finish
+    def _get_times() -> typing.Tuple[typing.Optional[float], typing.Optional[float]]:
+        cmd = """
+            on run
+        		tell application "%s"
+        			return {start, finish} of current track
+        		end tell
+            end run
+        """
+        try: return tuple(map(float, Script._process(cmd).split(', ')))
+        except: return None, None
+
     # position and duration
-    def _get_duration() -> typing.Tuple[typing.Optional[float], typing.Optional[float]]:
+    def _get_position() -> typing.Tuple[typing.Optional[float], typing.Optional[float]]:
         cmd = """
             on run
         		tell application "%s"
@@ -205,19 +218,21 @@ class Script:
         return response
 
 class Client(rumps.App):
-    def __init__(self):
+    def __init__(self) -> None:
         self.rpc = None
         self.savedResults = {}
         self.allowJoiners = False
+        self.prevTrack = None
+        self.metaCheckVar = 0
         self.connect()
         threading.Thread(target = self.routine, daemon = True).start()
 
-        super().__init__('Ongaku', title = '♫')
+        super().__init__('Ongaku', icon = 'images/icon_light.png', template = True)
 
-    def create_instance(self, clientID:str = '402370117901484042', pipe:int = 0):
+    def create_instance(self, clientID:str = '402370117901484042', pipe:int = 0) -> None:
         self.rpc = pypresence.Presence(clientID, pipe = pipe)
 
-    def connect(self):
+    def connect(self) -> None:
         if not self.rpc:
             self.create_instance()
         try:
@@ -225,7 +240,7 @@ class Client(rumps.App):
         except Exception as e:
             self.handle_error(e, True)
 
-    def handle_error(self, error:Exception, quit:bool = False):
+    def handle_error(self, error:Exception, quit:bool = False) -> None:
         with open(path + '/error.txt', 'a') as file:
             file.write('[%s] %s\n' % (datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S'), error))
         if quit:
@@ -235,29 +250,51 @@ class Client(rumps.App):
         print(error)
         rumps.notification('Error in Ongaku', 'Make an issue if error persists', '"%s"' % error)
 
-    def routine(self):
+    def stateChange(self, track:Script.Track) -> bool:
+        return (
+            not self.prevTrack
+            or (
+                not (self.prevTrack.State == track.State == Script.State.STOPPED)
+                and (
+                    self.prevTrack.State != track.State
+                    or self.prevTrack.ID != track.ID
+                    or (abs(self.prevTrack.metaCheck - (time.time() + (track.Duration - track.Position))) > 2 and track.State != Script.State.PAUSED)
+                )
+            )
+        )
+
+    def routine(self) -> None:
         while True:
             track = Script().song
-            # Script._get_artwork()
-            # Add local artwork loading at a later date
-            try:
-                self.update(track)
-            except Exception as err:
-                self.handle_error(err, True)
-            time.sleep(2)
 
-    def update(self, track:dict):
+            if self.stateChange(track):
+                self.prevTrack = track
+                try:
+                    if track.State != Script.State.STOPPED:
+                        self.prevTrack.metaCheck = time.time() + (track.Duration - track.Position)
+                        # Script._get_artwork()
+                        # Add local artwork loading at a later date
+                except Exception as err:
+                    self.handle_error(err)
+                try:
+                    self.update(track)
+                    time.sleep(1)
+                except Exception as err:
+                    self.handle_error(err, True)
+            time.sleep(0.5)
+
+    def update(self, track:Script.Track) -> None:
         dict = {
             'large_image': assetName,
             'large_text': appName,
         }
         if track.State != Script.State.STOPPED:
             dict['details'] = track.Name.ljust(2, '_')[:127]
-            dict['state'] = ', '.join(filter(lambda str : str != '', [track.Artist, track.Album if not track.Album in (track.Name, track.Name + ' - Single') else '']))
+            dict['state'] = ' - '.join(filter(lambda str : str != '', [track.Artist, track.Album if not track.Album in (track.Name, track.Name + ' - Single') else '']))
             if track.State == Script.State.PAUSED:
                 dict['state'] = 'Paused - ' + dict['state']
-            else:
-                dict['start'] = time.time()
+            elif track.Position and track.Duration:
+                dict['start'] = time.time() + track.Position
                 dict['end'] = time.time() + (track.Duration - track.Position)
             dict['state'] = dict['state'].ljust(2, '_')[:127]
 
@@ -298,4 +335,14 @@ class Client(rumps.App):
             self.rpc.clear()
 
 if __name__ == '__main__':
-    Client().run()
+    app = Client()
+    app.menu = [
+        rumps.MenuItem(
+            'Ongaku v%s' % ONGAKU_VER,
+            icon = 'images/AppIcon.iconset/icon_1024x1024.png',
+            dimensions = (18, 18),
+        ),
+        'Preferences',
+        None,
+    ]
+    app.run()
