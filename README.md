@@ -27,7 +27,7 @@ chmod +x build.sh
 If you have any issues, [make an issue](https://github.com/MCMi460/Ongaku/issues/new).
 
 ### Credits
-[Spotlight](https://github.com/spotlightishere) for (unknowingly and unwillingly) letting me use their code as reference for this.
+[Spotlight](https://github.com/spotlightishere) for (unknowingly and unwillingly) letting me use their code as reference for this.  
 [MrGameCub3](https://github.com/mrgamecub3) for the pretty new icon!
 
 [![pypresence](https://img.shields.io/badge/using-pypresence-00bb88.svg?style=for-the-badge&logo=discord&logoWidth=20)](https://github.com/qwertyquerty/pypresence)

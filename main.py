@@ -1,11 +1,15 @@
 ONGAKU_VER = 1.3
+VER_STR = 'Ongaku v%s' % ONGAKU_VER
 import sys
 
 if not sys.platform.startswith('darwin'):
     sys.exit('Non-MacOS is not yet supported. Sorry!')
 
-import platform, os, json, time, threading, subprocess, urllib, typing, enum, datetime, webbrowser, random
+import platform, os, json, time, threading, subprocess, urllib, typing, enum, datetime, webbrowser, random, faulthandler
+faulthandler.enable()
 import rumps, requests, pypresence
+if __name__ == '__main__':
+    from graphics import window
 
 ver = platform.mac_ver()[0].split('.')
 ver = float('.'.join((ver[0], ''.join(ver[1:]))))
@@ -169,7 +173,15 @@ class Client(rumps.App):
         self.connect()
         threading.Thread(target = self.routine, daemon = True).start()
 
-        super().__init__('Ongaku', icon = 'images/icon_light.png', template = True)
+        super().__init__('Ongaku', icon = 'images/icon_light.png', template = True, quit_button = None)
+
+    @rumps.clicked(VER_STR)
+    def About(self, sender):
+        window.orderFrontRegardless()
+    
+    @rumps.clicked('Quit')
+    def Quit(self, sender):
+        rumps.quit_application()
 
     def create_instance(self, clientID:str = '402370117901484042') -> None:
         for pipe in range(3):
@@ -305,11 +317,12 @@ if __name__ == '__main__':
     app = Client()
     app.menu = [
         rumps.MenuItem(
-            'Ongaku v%s' % ONGAKU_VER,
+            VER_STR,
             icon = 'images/AppIcon.iconset/icon_1024x1024.png',
             dimensions = (18, 18),
         ),
-        'Preferences',
+        #'Preferences', # Add at a later date
         None,
+        rumps.MenuItem('Quit', key = 'q'),
     ]
     app.run()
