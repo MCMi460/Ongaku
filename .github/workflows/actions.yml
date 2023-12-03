@@ -1,0 +1,32 @@
+name: 'Build Ongaku'
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    name: 'Build Ongaku'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ['macos-latest']
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v3
+      with:
+        python-version: 3.11.6
+
+    # There is no "arm64"/"M1" option for Github Workflows just yet
+    - name: "Build"
+      if: matrix.os == 'macos-latest'
+      run: |
+        ./build.sh &&
+        cd ./dist &&
+        zip -yr x86_64.zip Ongaku.app/
+
+    - name: "Upload Build"
+      if: matrix.os == 'macos-latest'
+      uses: softprops/action-gh-release@v0.1.15
+      with:
+        files: dist/x86_64.zip

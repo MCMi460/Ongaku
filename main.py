@@ -251,7 +251,7 @@ class Client(rumps.App):
                 dict['state'] = 'Paused - ' + dict['state']
                 dict['small_image'] = 'pause'
                 dict['small_text'] = 'Paused'
-            elif track.Position and track.Duration:
+            elif track.Position is not None and track.Duration:
                 dict['start'] = time.time() + track.Position
                 dict['end'] = time.time() + (track.Duration - track.Position)
                 dict['small_image'] = 'play'
