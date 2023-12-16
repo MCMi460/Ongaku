@@ -5,7 +5,7 @@ import sys
 if not sys.platform.startswith('darwin'):
     sys.exit('Non-MacOS is not yet supported. Sorry!')
 
-import platform, os, json, time, threading, subprocess, urllib, typing, enum, datetime, webbrowser, random, faulthandler
+import platform, os, json, time, threading, subprocess, urllib, typing, enum, datetime, webbrowser, random, faulthandler, base64
 faulthandler.enable()
 import rumps, requests, pypresence
 if __name__ == '__main__':
@@ -26,12 +26,26 @@ else:
     appName = 'iTunes'
     assetName = 'itunes_logo'
 
+# Default settings
+config = {
+    'uploadCovers': False,
+    'allowJoiners': False,
+}
+
 # Working directory
 path = os.path.expanduser('~/Library/Application Support/Ongaku')
 if not os.path.isdir(path):
     os.mkdir(path)
+configFile = os.path.join(path, 'config.json')
+if not os.path.isfile(configFile):
+    with open(configFile, 'w+') as file: file.write(json.dumps(config))
+else:
+    with open(configFile, 'r') as file:
+        config = json.loads(file.read())
 
 class Script:
+    DELIMITER = '🤷'
+
     class State(enum.Enum):
         STOPPED = 0
         PLAYING = 1
@@ -63,7 +77,7 @@ class Script:
             [
                 'osascript',
                 '-e',
-                cmd % appName
+                cmd % (Script.DELIMITER, appName)
             ],
             capture_output = True
         ).stdout.decode('utf-8').rstrip()
@@ -72,7 +86,7 @@ class Script:
     def song(self) -> 'Script.Track':
         # typing.Tuple[typing.Tuple[int, str, str, str, float, 'Script.Cloud_Status', 'Script.State', float]]
         try:
-            ID, Name, Album, Artist, Duration, Cloud_Status, State, Position = Script._script().split(', ')
+            ID, Name, Album, Artist, Duration, Cloud_Status, State, Position = Script._script().split(Script.DELIMITER)
             ID = int(ID)
             Duration = float(Duration)
             Cloud_Status = Script.Cloud_Status[
@@ -108,8 +122,9 @@ class Script:
     def _script() -> str:
         cmd = """
             on run
+                set text item delimiters to "%s"
                 tell application "%s"
-                    return {database ID, name, album, artist, duration, cloud status} of current track & player state & player position
+                    return {database ID, name, album, artist, duration, cloud status} of current track & player state & player position as text
                 end tell
             end run
         """
@@ -119,6 +134,7 @@ class Script:
     def _get_lyrics() -> str:
         cmd = """
             on run
+                set text item delimiters to "%s"
         		tell application "%s"
         			return lyrics of current track
         		end tell
@@ -130,18 +146,20 @@ class Script:
     def _get_times() -> typing.Tuple[typing.Optional[float], typing.Optional[float]]:
         cmd = """
             on run
+                set text item delimiters to "%s"
         		tell application "%s"
-        			return {start, finish} of current track
+        			return {start, finish} of current track as text
         		end tell
             end run
         """
-        try: return tuple(map(float, Script._process(cmd).split(', ')))
+        try: return tuple(map(float, Script._process(cmd).split(Script.DELIMITER)))
         except: return None, None
 
     # artwork ... deprecated for now
-    def _get_artwork() -> str:
+    def _get_artwork() -> typing.Optional[str]:
         cmd = """
             on run
+                set text item delimiters to "%s"
             	tell application "%s"
             		return {format, raw data} of first artwork of current track & database ID of current track
             	end tell
@@ -154,20 +172,50 @@ class Script:
                 format = format.rstrip(' picture')
             else:
                 format = format.lstrip('«class ').rstrip(' »')
+            data = bytes.fromhex(data.lstrip('«data tdta').rstrip('»'))
+            # Cover paths
             coversPath = os.path.join(path, 'covers')
-            filePath = os.path.join(coversPath, id + '.' + format)
             if not os.path.isdir(coversPath):
                 os.mkdir(coversPath)
-            if not os.path.isfile(filePath):
-                with open(filePath, 'wb+') as file:
-                    file.write(bytes.fromhex(data.lstrip('«data tdta').rstrip('»')))
-        return response
+            idPath = os.path.join(coversPath, 'urls.json')
+            if not os.path.isfile(idPath):
+                with open(idPath, 'w+') as file: file.write(json.dumps({'ids':[]}))
+
+            with open(idPath, 'r') as read:
+                items = json.loads(read.read())
+                if len([ item for item in items['ids'] if item[0] == id ]) == 0:
+                    url = requests.post(
+                        'https://freeimage.host/api/1/upload',
+                        data = {
+                            'key': '6d207e02198a847aa98d0a2a901485a5',
+                            'source': base64.b64encode(data),
+                        },
+                    ).json()['image']['url']
+                    with open(idPath, 'w') as write:
+                        items['ids'].append(
+                            (id, url)
+                        )
+                        write.write(json.dumps(items))
+                else:
+                    for item in items['ids']:
+                        if item[0] == id:
+                            url = item[1]
+                            break
+            return url
+            # Disable writing
+            #filePath = os.path.join(coversPath, id + '.' + format)
+            #if not os.path.isfile(filePath):
+            #    with open(filePath, 'wb+') as file:
+            #        file.write(data)
+            #return filePath
+        return None
 
 class Client(rumps.App):
-    def __init__(self) -> None:
+    def __init__(self, **kwargs) -> None:
         self.rpc = None
         self.savedResults = {}
-        self.allowJoiners = False #random.getrandbits(64)
+        self.allowJoiners = random.getrandbits(64) if kwargs['allowJoiners'] else False
+        self.uploadCovers = kwargs['uploadCovers']
         self.prevTrack = None
         self.metaCheckVar = 0
         self.connect()
@@ -234,26 +282,27 @@ class Client(rumps.App):
     def routine(self) -> None:
         while True:
             track = Script().song
+            imageUrl = None
 
             if self.stateChange(track) or self.allowJoiners:
                 self.prevTrack = track
                 try:
                     if track.State != Script.State.STOPPED:
                         self.prevTrack.metaCheck = time.time() + (track.Duration - track.Position)
-                        # Script._get_artwork()
-                        # Add local artwork loading at a later date
+                        if self.uploadCovers:
+                            imageUrl = Script._get_artwork()
                 except Exception as err:
                     self.handle_error(err)
                 try:
-                    self.update(track)
+                    self.update(track, imageUrl)
                     time.sleep(1)
                 except Exception as err:
                     self.handle_error(err, True)
             time.sleep(1)
 
-    def update(self, track:Script.Track) -> None:
+    def update(self, track:Script.Track, imageUrl:str = None) -> None:
         dict = {
-            'large_image': assetName,
+            'large_image': assetName if not imageUrl else imageUrl,
             'large_text': appName,
         }
         if track.State != Script.State.STOPPED:
@@ -281,27 +330,13 @@ class Client(rumps.App):
                     store = requests.get(searchString).json()['results']
                     self.savedResults[searchString] = store
                 if len(store) > 0:
-                    dict['large_image'] = store[0]['artworkUrl100']
-                    dict['large_text'] = dict['details']
+                    if not self.uploadCovers:
+                        dict['large_image'] = store[0]['artworkUrl100'] 
                     if not self.allowJoiners:
                         dict['buttons'] = [{
                             'label': 'View in Store',
                             'url': store[0]['trackViewUrl'],
                         },]
-                        # Lyrics support is deprecated
-                        #if track.Lyrics != '':
-                        #    dict['buttons'].append(
-                        #        {
-                        #            'label': 'View Lyrics',
-                        #            'url':
-                        #                'https://music.mi460.dev/#api=True&lyrics='
-                        #                + urllib.parse.quote(track.Lyrics)
-                        #                + '&song='
-                        #                + urllib.parse.quote(track.Name)
-                        #                + '&state='
-                        #                + urllib.parse.quote(dict['state'])
-                        #        }
-                        #    )
                     else:
                         dict['join'] = json.dumps({
                             'url': store[0]['trackViewUrl'],
@@ -309,12 +344,16 @@ class Client(rumps.App):
                         })
                         dict['party_id'] = str(self.allowJoiners)
                         dict['party_size'] = [1, 2]
+            if dict['large_image'] != assetName:
+                dict['large_text'] = dict['details']
             self.rpc.set_activity(**dict)
         else:
             self.rpc.clear_activity()
 
 if __name__ == '__main__':
-    app = Client()
+    app = Client(
+        **config,
+    )
     app.menu = [
         rumps.MenuItem(
             VER_STR,
