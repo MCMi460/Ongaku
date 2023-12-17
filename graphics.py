@@ -23,6 +23,7 @@ delegate = Delegate.alloc().init()
 
 configMatch = {
     'uploadCovers': 'Display local cover art\n(WARNING: This uploads your cover arts to freeimage.host)',
+    'allowJoiners': 'Allow invites to/from other Ongaku users\n(Not recommended)',
 }
 
 # Text fields
@@ -138,6 +139,12 @@ uploadCoversButton.title = configMatch['uploadCovers']
 uploadCoversButton.state = configs['uploadCovers']
 uploadCoversButton.setAction('updateConfig:')
 preferencesWindow.contentView().addSubview_(uploadCoversButton.object)
+
+allowJoinersButton = Checkbox(NSMakeRect(30.0, 120.0, 350.0, 40.0))
+allowJoinersButton.title = configMatch['allowJoiners']
+allowJoinersButton.state = configs['allowJoiners']
+allowJoinersButton.setAction('updateConfig:')
+preferencesWindow.contentView().addSubview_(allowJoinersButton.object)
 
 title = Text(NSMakeRect(107.0, 260.0, 165.0, 20.0))
 title.string = 'Ongaku Preferences'

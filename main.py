@@ -236,6 +236,11 @@ class Client(rumps.App):
         config = Config.read()
         if config['allowJoiners'] and not self.allowJoiners:
             self.allowJoiners = random.getrandbits(64)
+            self.rpc.register_event('ACTIVITY_JOIN', self.join)
+            self.rpc.subscribe('ACTIVITY_JOIN')
+        elif not config['allowJoiners'] and self.allowJoiners:
+            self.allowJoiners = False
+            self.rpc.unsubscribe('ACTIVITY_JOIN')
         self.uploadCovers = config['uploadCovers']
 
     @rumps.clicked(VER_STR)
@@ -264,10 +269,6 @@ class Client(rumps.App):
             self.create_instance()
         try:
             self.rpc.start()
-            
-            if self.allowJoiners:
-                self.rpc.register_event('ACTIVITY_JOIN', self.join)
-                self.rpc.subscribe('ACTIVITY_JOIN')
         except Exception as e:
             self.handle_error(e, True)
 
