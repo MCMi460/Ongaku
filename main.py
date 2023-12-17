@@ -8,8 +8,8 @@ if not sys.platform.startswith('darwin'):
 import platform, os, json, time, threading, subprocess, urllib, typing, enum, datetime, webbrowser, random, faulthandler, base64
 faulthandler.enable()
 import rumps, requests, pypresence
-if __name__ == '__main__':
-    from graphics import window
+if __name__ == '__main__': # Prevent import recursion
+    from graphics import aboutWindow, preferencesWindow
 
 ver = platform.mac_ver()[0].split('.')
 ver = float('.'.join((ver[0], ''.join(ver[1:]))))
@@ -26,22 +26,30 @@ else:
     appName = 'iTunes'
     assetName = 'itunes_logo'
 
-# Default settings
-config = {
-    'uploadCovers': False,
-    'allowJoiners': False,
-}
-
 # Working directory
 path = os.path.expanduser('~/Library/Application Support/Ongaku')
 if not os.path.isdir(path):
     os.mkdir(path)
 configFile = os.path.join(path, 'config.json')
-if not os.path.isfile(configFile):
-    with open(configFile, 'w+') as file: file.write(json.dumps(config))
-else:
-    with open(configFile, 'r') as file:
-        config = json.loads(file.read())
+
+# Default settings
+class Config:
+    def init():
+        Config.write({
+            'uploadCovers': False,
+            'allowJoiners': False,
+        })
+    
+    def read() -> dict:
+        if not os.path.isfile(configFile):
+            Config.init()
+        
+        with open(configFile, 'r') as file:
+            return json.loads(file.read())
+    
+    def write(configs:dict):
+        with open(configFile, 'w+') as file:
+            file.write(json.dumps(configs))
 
 class Script:
     DELIMITER = '🤷'
@@ -211,11 +219,12 @@ class Script:
         return None
 
 class Client(rumps.App):
-    def __init__(self, **kwargs) -> None:
+    def __init__(self) -> None:
         self.rpc = None
         self.savedResults = {}
-        self.allowJoiners = random.getrandbits(64) if kwargs['allowJoiners'] else False
-        self.uploadCovers = kwargs['uploadCovers']
+        self.allowJoiners = False # Not recommended
+        self.uploadCovers = False
+        self.handleConfigs()
         self.prevTrack = None
         self.metaCheckVar = 0
         self.connect()
@@ -223,9 +232,19 @@ class Client(rumps.App):
 
         super().__init__('Ongaku', icon = 'images/icon_light.png', template = True, quit_button = None)
 
+    def handleConfigs(self):
+        config = Config.read()
+        if config['allowJoiners'] and not self.allowJoiners:
+            self.allowJoiners = random.getrandbits(64)
+        self.uploadCovers = config['uploadCovers']
+
     @rumps.clicked(VER_STR)
     def About(self, sender):
-        window.orderFrontRegardless()
+        aboutWindow.orderFrontRegardless()
+    
+    @rumps.clicked('Preferences')
+    def Preferences(self, sender):
+        preferencesWindow.orderFrontRegardless()
     
     @rumps.clicked('Quit')
     def Quit(self, sender):
@@ -283,6 +302,7 @@ class Client(rumps.App):
         while True:
             track = Script().song
             imageUrl = None
+            self.handleConfigs()
 
             if self.stateChange(track) or self.allowJoiners:
                 self.prevTrack = track
@@ -351,16 +371,14 @@ class Client(rumps.App):
             self.rpc.clear_activity()
 
 if __name__ == '__main__':
-    app = Client(
-        **config,
-    )
+    app = Client()
     app.menu = [
         rumps.MenuItem(
             VER_STR,
             icon = 'images/AppIcon.iconset/icon_1024x1024.png',
             dimensions = (18, 18),
         ),
-        #'Preferences', # Add at a later date
+        'Preferences',
         None,
         rumps.MenuItem('Quit', key = 'q'),
     ]
