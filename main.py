@@ -327,9 +327,8 @@ class Client(rumps.App):
         }
         if track.State != Script.State.STOPPED:
             dict['details'] = track.Name.ljust(2, '_')[:127]
-            dict['state'] = ' - '.join(filter(lambda str : str != '', [track.Artist, track.Album if not track.Album in (track.Name, track.Name + ' - Single') else '']))
+            dict['state'] = ' — '.join(filter(lambda str : str != '', [track.Artist, track.Album if not track.Album in (track.Name, track.Name + ' - Single') else '']))
             if track.State == Script.State.PAUSED:
-                dict['state'] = 'Paused - ' + dict['state']
                 dict['small_image'] = 'pause'
                 dict['small_text'] = 'Paused'
             elif track.Position is not None and track.Duration:
