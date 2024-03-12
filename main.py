@@ -7,7 +7,7 @@ if not sys.platform.startswith('darwin'):
 
 import platform, os, json, time, threading, subprocess, urllib, typing, enum, datetime, webbrowser, random, faulthandler, base64
 faulthandler.enable()
-import rumps, requests, pypresence
+import rumps, requests, presence
 if __name__ == '__main__': # Prevent import recursion
     from graphics import aboutWindow, preferencesWindow
 
@@ -224,10 +224,10 @@ class Client(rumps.App):
         self.savedResults = {}
         self.allowJoiners = False # Not recommended
         self.uploadCovers = False
-        self.handleConfigs()
         self.prevTrack = None
         self.metaCheckVar = 0
         self.connect()
+        self.handleConfigs()
         threading.Thread(target = self.routine, daemon = True).start()
 
         super().__init__('Ongaku', icon = 'images/icon_light.png', template = True, quit_button = None)
@@ -236,11 +236,10 @@ class Client(rumps.App):
         config = Config.read()
         if config['allowJoiners'] and not self.allowJoiners:
             self.allowJoiners = random.getrandbits(64)
-            self.rpc.register_event('ACTIVITY_JOIN', self.join)
-            self.rpc.subscribe('ACTIVITY_JOIN')
+            self.rpc.IPC._subscribe('ACTIVITY_JOIN', self.join)
         elif not config['allowJoiners'] and self.allowJoiners:
             self.allowJoiners = False
-            self.rpc.unsubscribe('ACTIVITY_JOIN')
+            self.rpc.IPC._unsubscribe('ACTIVITY_JOIN')
         self.uploadCovers = config['uploadCovers']
 
     @rumps.clicked(VER_STR)
@@ -258,17 +257,16 @@ class Client(rumps.App):
     def create_instance(self, clientID:str = '402370117901484042') -> None:
         for pipe in range(3):
             try:
-                self.rpc = pypresence.Client(clientID, pipe = pipe)
+                self.rpc = presence.Client(clientID, pipe = pipe)
                 return
             except Exception as err:
                 pass
         raise err
 
     def connect(self) -> None:
-        if not self.rpc:
-            self.create_instance()
         try:
-            self.rpc.start()
+            if not self.rpc:
+                self.create_instance()
         except Exception as e:
             self.handle_error(e, True)
 
@@ -363,12 +361,12 @@ class Client(rumps.App):
                             'pos': track.Position,
                         })
                         dict['party_id'] = str(self.allowJoiners)
-                        dict['party_size'] = [1, 2]
+                        dict['party_size'] = (1, 2)
             if dict['large_image'] != assetName:
                 dict['large_text'] = dict['details']
-            self.rpc.set_activity(**dict)
+            self.rpc.update(presence.Presence(**dict))
         else:
-            self.rpc.clear_activity()
+            self.rpc.update()
 
 if __name__ == '__main__':
     app = Client()

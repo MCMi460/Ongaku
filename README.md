@@ -9,7 +9,7 @@
 
 A port of Spotlight's **[Ongaku](https://github.com/spotlightishere/Ongaku)** to Python.
 
-Ongaku is a simple application that provides a Discord status of your currently playing song from the iTunes (or Music) app via [PyPresence](https://github.com/qwertyquerty/pypresence).
+Ongaku is a simple application that provides a Discord status of your currently playing song from the iTunes (or Music) app.
 
 ![Example Image](/images/screenshot3.png?raw=true)
 
