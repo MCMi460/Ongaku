@@ -62,6 +62,7 @@ class Script:
         REWINDING = 4
 
     class Cloud_Status(enum.Enum):
+        MISSING_VALUE = -1
         UNKNOWN = 0
         PURCHASED = 1
         MATCHED = 2
@@ -113,18 +114,17 @@ class Script:
             State = Script.State.STOPPED
         except Exception as err:
             raise err # Intentionally raise exception
-        finally:
-            return Script.Track(
-                ID = ID,
-                Name = Name,
-                Album = Album,
-                Artist = Artist,
-                Duration = Duration,
-                Cloud_Status = Cloud_Status,
-                State = State,
-                Position = Position,
-                #Lyrics = Script._get_lyrics(),
-            )
+        return Script.Track(
+            ID = ID,
+            Name = Name,
+            Album = Album,
+            Artist = Artist,
+            Duration = Duration,
+            Cloud_Status = Cloud_Status,
+            State = State,
+            Position = Position,
+            #Lyrics = Script._get_lyrics(),
+        )
 
     # get all necessary fields
     def _script() -> str:
