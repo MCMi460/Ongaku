@@ -323,6 +323,7 @@ class Client(rumps.App):
         dict = {
             'large_image': assetName if not imageUrl else imageUrl,
             'large_text': appName,
+            'type': presence.ActivityType.LISTENING,
         }
         if track.State != Script.State.STOPPED:
             dict['details'] = track.Name.ljust(2, '_')[:127]
@@ -331,7 +332,7 @@ class Client(rumps.App):
                 dict['small_image'] = 'pause'
                 dict['small_text'] = 'Paused'
             elif track.Position is not None and track.Duration:
-                dict['start'] = time.time() + track.Position
+                dict['start'] = time.time() - track.Position
                 dict['end'] = time.time() + (track.Duration - track.Position)
                 dict['small_image'] = 'play'
                 dict['small_text'] = 'Playing'

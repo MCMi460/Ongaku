@@ -1,3 +1,3 @@
 rumps
 requests
-git+https://github.com/MCMi460/MacPresence.git
+mac-presence @ git+https://github.com/MCMi460/MacPresence.git
