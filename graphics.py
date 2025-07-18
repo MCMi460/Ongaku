@@ -130,7 +130,7 @@ preferencesWindow = NSWindow.alloc().initWithContentRect_styleMask_backing_defer
     False,
 )
 preferencesWindow.center()
-preferencesWindow.setTitle_('Ongaku Preferences')
+preferencesWindow.setTitle_('Ongaku Settings')
 preferencesWindow.setDelegate_(delegate)
 preferencesWindow.orderOut_(preferencesWindow)
 
@@ -145,12 +145,6 @@ allowJoinersButton.title = configMatch['allowJoiners']
 allowJoinersButton.state = configs['allowJoiners']
 allowJoinersButton.setAction('updateConfig:')
 preferencesWindow.contentView().addSubview_(allowJoinersButton.object)
-
-title = Text(NSMakeRect(107.0, 260.0, 165.0, 20.0))
-title.string = 'Ongaku Preferences'
-title.setBold()
-title.center()
-preferencesWindow.contentView().addSubview_(title.object)
 
 # If running as a debug process
 if __name__ == '__main__':

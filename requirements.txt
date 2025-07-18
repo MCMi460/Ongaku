@@ -1,3 +1,5 @@
 rumps
 requests
 mac-presence @ git+https://github.com/MCMi460/MacPresence.git
+pyobjc
+setuptools==70.3.0

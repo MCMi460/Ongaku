@@ -1,4 +1,4 @@
-ONGAKU_VER = 1.3
+ONGAKU_VER = '1.3.1'
 VER_STR = 'Ongaku v%s' % ONGAKU_VER
 import sys
 
@@ -246,8 +246,8 @@ class Client(rumps.App):
     def About(self, sender):
         aboutWindow.orderFrontRegardless()
     
-    @rumps.clicked('Preferences')
-    def Preferences(self, sender):
+    @rumps.clicked('Settings...')
+    def Settings(self, sender):
         preferencesWindow.orderFrontRegardless()
     
     @rumps.clicked('Quit')
@@ -320,23 +320,26 @@ class Client(rumps.App):
             time.sleep(1)
 
     def update(self, track:Script.Track, imageUrl:str = None) -> None:
-        dict = {
+        presenceDict = {
             'large_image': assetName if not imageUrl else imageUrl,
             'large_text': appName,
             'type': presence.ActivityType.LISTENING,
         }
         if track.State != Script.State.STOPPED:
-            dict['details'] = track.Name.ljust(2, '_')[:127]
-            dict['state'] = ' — '.join(filter(lambda str : str != '', [track.Artist, track.Album if not track.Album in (track.Name, track.Name + ' - Single') else '']))
+            presenceDict['details'] = track.Name.ljust(2, '_')[:127]
+            presenceDict['state'] = ' — '.join(filter(lambda str : str != '', [track.Artist, track.Album if not track.Album in (track.Name, track.Name + ' - Single') else '']))
             if track.State == Script.State.PAUSED:
-                dict['small_image'] = 'pause'
-                dict['small_text'] = 'Paused'
+                presenceDict['large_image'] = assetName
+                presenceDict['details'] = appName
+                presenceDict['state'] = 'Paused'
+                presenceDict['small_image'] = 'pause'
+                presenceDict['small_text'] = 'Paused'
             elif track.Position is not None and track.Duration:
-                dict['start'] = time.time() - track.Position
-                dict['end'] = time.time() + (track.Duration - track.Position)
-                dict['small_image'] = 'play'
-                dict['small_text'] = 'Playing'
-            dict['state'] = dict['state'].ljust(2, '_')[:127]
+                presenceDict['start'] = time.time() - track.Position
+                presenceDict['end'] = time.time() + (track.Duration - track.Position)
+                presenceDict['small_image'] = 'play'
+                presenceDict['small_text'] = 'Playing'
+            presenceDict['state'] = presenceDict['state'].ljust(2, '_')[:127]
 
             if track.Cloud_Status in (
                 Script.Cloud_Status.PURCHASED,
@@ -350,22 +353,23 @@ class Client(rumps.App):
                     self.savedResults[searchString] = store
                 if len(store) > 0:
                     if not self.uploadCovers:
-                        dict['large_image'] = store[0]['artworkUrl100'] 
+                        presenceDict['large_image'] = store[0]['artworkUrl100'] 
                     if not self.allowJoiners:
-                        dict['buttons'] = [{
+                        presenceDict['buttons'] = [{
                             'label': 'View in Store',
                             'url': store[0]['trackViewUrl'],
                         },]
                     else:
-                        dict['join'] = json.dumps({
+                        presenceDict['type'] = presence.ActivityType.PLAYING
+                        presenceDict['join'] = json.dumps({
                             'url': store[0]['trackViewUrl'],
                             'pos': track.Position,
                         })
-                        dict['party_id'] = str(self.allowJoiners)
-                        dict['party_size'] = (1, 2)
-            if dict['large_image'] != assetName:
-                dict['large_text'] = dict['details']
-            self.rpc.update(presence.Presence(**dict))
+                        presenceDict['party_id'] = str(self.allowJoiners)
+                        presenceDict['party_size'] = (1, 2)
+            if presenceDict['large_image'] != assetName:
+                presenceDict['large_text'] = presenceDict['details']
+            self.rpc.update(presence.Presence(**presenceDict))
         else:
             self.rpc.update()
 
@@ -377,7 +381,8 @@ if __name__ == '__main__':
             icon = 'images/AppIcon.iconset/icon_1024x1024.png',
             dimensions = (18, 18),
         ),
-        'Preferences',
+        None,
+        rumps.MenuItem('Settings...', key = ','),
         None,
         rumps.MenuItem('Quit', key = 'q'),
     ]
