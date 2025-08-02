@@ -320,16 +320,10 @@ class Client(rumps.App):
             'large_text': appName,
             'type': presence.ActivityType.LISTENING,
         }
-        if track.State != Script.State.STOPPED:
+        if track.State != Script.State.STOPPED and track.State != Script.State.PAUSED:
             presenceDict['details'] = track.Name.ljust(2, '_')[:127]
             presenceDict['state'] = ' — '.join(filter(lambda str : str != '', [track.Artist, track.Album if not track.Album in (track.Name, track.Name + ' - Single') else '']))
-            if track.State == Script.State.PAUSED:
-                presenceDict['large_image'] = assetName
-                presenceDict['details'] = appName
-                presenceDict['state'] = 'Paused'
-                presenceDict['small_image'] = 'pause'
-                presenceDict['small_text'] = 'Paused'
-            elif track.Position is not None and track.Duration:
+            if track.Position is not None and track.Duration:
                 presenceDict['start'] = time.time() - track.Position
                 presenceDict['end'] = time.time() + (track.Duration - track.Position)
                 presenceDict['small_image'] = 'play'
