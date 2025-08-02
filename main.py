@@ -254,24 +254,14 @@ class Client(rumps.App):
     def Quit(self, sender):
         rumps.quit_application()
 
-    def create_instance(self, clientID:str = '402370117901484042') -> None:
-        for pipe in range(3):
-            try:
-                self.rpc = presence.Client(clientID, pipe = pipe)
-                return
-            except Exception as err:
-                pass
-        raise err
-
-    def connect(self) -> None:
+    def connect(self, clientID:str = '402370117901484042') -> None:
         try:
-            if not self.rpc:
-                self.create_instance()
-        except Exception as e:
-            self.handle_error(e, True)
+            self.rpc = presence.Client(clientID)
+        except ConnectionRefusedError:
+            pass
 
     def handle_error(self, error:Exception, quit:bool = False) -> None:
-        with open(path + '/error.txt', 'a') as file:
+        with open(os.path.join(path, 'error.txt'), 'a') as file:
             file.write('[%s] %s\n' % (datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S'), error))
         if quit:
             rumps.alert('Error in Ongaku', '"%s"' % error)
@@ -299,25 +289,30 @@ class Client(rumps.App):
 
     def routine(self) -> None:
         while True:
-            track = Script().song
-            imageUrl = None
-            self.handleConfigs()
+            time.sleep(1)
+            try:
+                track = Script().song
+                imageUrl = None
+                self.handleConfigs()
 
-            if self.stateChange(track) or self.allowJoiners:
-                self.prevTrack = track
-                try:
-                    if track.State != Script.State.STOPPED:
-                        self.prevTrack.metaCheck = time.time() + (track.Duration - track.Position)
-                        if self.uploadCovers:
-                            imageUrl = Script._get_artwork()
-                except Exception as err:
-                    self.handle_error(err)
-                try:
+                if self.stateChange(track) or self.allowJoiners:
+                    self.prevTrack = track
+                    try:
+                        if track.State != Script.State.STOPPED:
+                            self.prevTrack.metaCheck = time.time() + (track.Duration - track.Position)
+                            if self.uploadCovers:
+                                imageUrl = Script._get_artwork()
+                    except Exception as err:
+                        self.handle_error(err)
                     self.update(track, imageUrl)
                     time.sleep(1)
-                except Exception as err:
-                    self.handle_error(err, True)
-            time.sleep(1)
+            except (AttributeError, ConnectionRefusedError, BrokenPipeError) as err:
+                time.sleep(10)
+                self.handle_error(err)
+                self.connect()
+                self.prevTrack = None
+            except Exception as err:
+                self.handle_error(err, True)
 
     def update(self, track:Script.Track, imageUrl:str = None) -> None:
         presenceDict = {
