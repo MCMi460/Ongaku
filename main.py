@@ -1,4 +1,4 @@
-ONGAKU_VER = '1.3.1'
+ONGAKU_VER = '1.3.2'
 VER_STR = 'Ongaku v%s' % ONGAKU_VER
 import sys
 
