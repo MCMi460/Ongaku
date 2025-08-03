@@ -1,58 +1,66 @@
-ONGAKU_VER = '1.3.2'
-VER_STR = 'Ongaku v%s' % ONGAKU_VER
+ONGAKU_VER = "1.3.2"
+VER_STR = "Ongaku v%s" % ONGAKU_VER
 import sys
 
-if not sys.platform.startswith('darwin'):
-    sys.exit('Non-MacOS is not yet supported. Sorry!')
+if not sys.platform.startswith("darwin"):
+    sys.exit("Non-MacOS is not yet supported. Sorry!")
 
 import platform, os, json, time, threading, subprocess, urllib, typing, enum, datetime, webbrowser, random, faulthandler, base64
+
 faulthandler.enable()
 import rumps, requests, presence
-if __name__ == '__main__': # Prevent import recursion
+
+if __name__ == "__main__":  # Prevent import recursion
     from graphics import aboutWindow, preferencesWindow
 
-ver = platform.mac_ver()[0].split('.')
-ver = float('.'.join((ver[0], ''.join(ver[1:]))))
+ver = platform.mac_ver()[0].split(".")
+ver = float(".".join((ver[0], "".join(ver[1:]))))
 
-appName = 'Music'
+appName = "Music"
 
 if 11.3 > ver >= 11.0:
-    sys.exit('Apple Script is broken before Big Sur 11.3 - please update to use this program.')
+    sys.exit(
+        "Apple Script is broken before Big Sur 11.3 - please update to use this program."
+    )
 if ver >= 10.16:
-    assetName = 'big_sur_logo'
+    assetName = "big_sur_logo"
 elif ver == 10.15:
-    assetName = 'music_logo'
+    assetName = "music_logo"
 else:
-    appName = 'iTunes'
-    assetName = 'itunes_logo'
+    appName = "iTunes"
+    assetName = "itunes_logo"
 
 # Working directory
-path = os.path.expanduser('~/Library/Application Support/Ongaku')
+path = os.path.expanduser("~/Library/Application Support/Ongaku")
 if not os.path.isdir(path):
     os.mkdir(path)
-configFile = os.path.join(path, 'config.json')
+configFile = os.path.join(path, "config.json")
+
 
 # Default settings
 class Config:
     def init():
-        Config.write({
-            'uploadCovers': False,
-            'allowJoiners': False,
-        })
-    
+        Config.write(
+            {
+                "uploadCovers": False,
+                "allowJoiners": False,
+            }
+        )
+
     def read() -> dict:
         if not os.path.isfile(configFile):
             Config.init()
-        
-        with open(configFile, 'r') as file:
+
+        with open(configFile, "r") as file:
             return json.loads(file.read())
-    
-    def write(configs:dict):
-        with open(configFile, 'w+') as file:
+
+    def write(configs: dict):
+        with open(configFile, "w+") as file:
             file.write(json.dumps(configs))
 
+
 class Script:
-    DELIMITER = '🤷'
+    DELIMITER = "🤷"
 
     class State(enum.Enum):
         STOPPED = 0
@@ -82,48 +90,42 @@ class Script:
                 self.__dict__[key] = kwargs[key]
 
     def _process(cmd) -> str:
-        return subprocess.run(
-            [
-                'osascript',
-                '-e',
-                cmd % (Script.DELIMITER, appName)
-            ],
-            capture_output = True
-        ).stdout.decode('utf-8').rstrip()
+        return (
+            subprocess.run(
+                ["osascript", "-e", cmd % (Script.DELIMITER, appName)],
+                capture_output=True,
+            )
+            .stdout.decode("utf-8")
+            .rstrip()
+        )
 
     @property
-    def song(self) -> 'Script.Track':
+    def song(self) -> "Script.Track":
         # typing.Tuple[typing.Tuple[int, str, str, str, float, 'Script.Cloud_Status', 'Script.State', float]]
         try:
-            ID, Name, Album, Artist, Duration, Cloud_Status, State, Position = Script._script().split(Script.DELIMITER)
+            ID, Name, Album, Artist, Duration, Cloud_Status, State, Position = (
+                Script._script().split(Script.DELIMITER)
+            )
             ID = int(ID)
             Duration = float(Duration)
-            Cloud_Status = Script.Cloud_Status[
-                Cloud_Status
-                .upper()
-                .replace(' ', '_')
-            ]
-            State = Script.State[
-                State
-                .upper()
-                .replace(' ', '_')
-            ]
+            Cloud_Status = Script.Cloud_Status[Cloud_Status.upper().replace(" ", "_")]
+            State = Script.State[State.upper().replace(" ", "_")]
             Position = float(Position)
         except ValueError:
             ID = Name = Album = Artist = Duration = Cloud_Status = Position = None
             State = Script.State.STOPPED
         except Exception as err:
-            raise err # Intentionally raise exception
+            raise err  # Intentionally raise exception
         return Script.Track(
-            ID = ID,
-            Name = Name,
-            Album = Album,
-            Artist = Artist,
-            Duration = Duration,
-            Cloud_Status = Cloud_Status,
-            State = State,
-            Position = Position,
-            #Lyrics = Script._get_lyrics(),
+            ID=ID,
+            Name=Name,
+            Album=Album,
+            Artist=Artist,
+            Duration=Duration,
+            Cloud_Status=Cloud_Status,
+            State=State,
+            Position=Position,
+            # Lyrics = Script._get_lyrics(),
         )
 
     # get all necessary fields
@@ -160,8 +162,10 @@ class Script:
         		end tell
             end run
         """
-        try: return tuple(map(float, Script._process(cmd).split(Script.DELIMITER)))
-        except: return None, None
+        try:
+            return tuple(map(float, Script._process(cmd).split(Script.DELIMITER)))
+        except:
+            return None, None
 
     # artwork ... deprecated for now
     def _get_artwork() -> typing.Optional[str]:
@@ -175,114 +179,125 @@ class Script:
         """
         response = Script._process(cmd)
         if response:
-            format, data, id = response.split(', ')
-            if 'picture' in format:
-                format = format.rstrip(' picture')
+            format, data, id = response.split(", ")
+            if "picture" in format:
+                format = format.rstrip(" picture")
             else:
-                format = format.lstrip('«class ').rstrip(' »')
-            data = bytes.fromhex(data.lstrip('«data tdta').rstrip('»'))
+                format = format.lstrip("«class ").rstrip(" »")
+            data = bytes.fromhex(data.lstrip("«data tdta").rstrip("»"))
             # Cover paths
-            coversPath = os.path.join(path, 'covers')
+            coversPath = os.path.join(path, "covers")
             if not os.path.isdir(coversPath):
                 os.mkdir(coversPath)
-            idPath = os.path.join(coversPath, 'urls.json')
+            idPath = os.path.join(coversPath, "urls.json")
             if not os.path.isfile(idPath):
-                with open(idPath, 'w+') as file: file.write(json.dumps({'ids':[]}))
+                with open(idPath, "w+") as file:
+                    file.write(json.dumps({"ids": []}))
 
-            with open(idPath, 'r') as read:
+            with open(idPath, "r") as read:
                 items = json.loads(read.read())
-                if len([ item for item in items['ids'] if item[0] == id ]) == 0:
+                if len([item for item in items["ids"] if item[0] == id]) == 0:
                     url = requests.post(
-                        'https://freeimage.host/api/1/upload',
-                        data = {
-                            'key': '6d207e02198a847aa98d0a2a901485a5',
-                            'source': base64.b64encode(data),
+                        "https://freeimage.host/api/1/upload",
+                        data={
+                            "key": "6d207e02198a847aa98d0a2a901485a5",
+                            "source": base64.b64encode(data),
                         },
-                    ).json()['image']['url']
-                    with open(idPath, 'w') as write:
-                        items['ids'].append(
-                            (id, url)
-                        )
+                    ).json()["image"]["url"]
+                    with open(idPath, "w") as write:
+                        items["ids"].append((id, url))
                         write.write(json.dumps(items))
                 else:
-                    for item in items['ids']:
+                    for item in items["ids"]:
                         if item[0] == id:
                             url = item[1]
                             break
             return url
             # Disable writing
-            #filePath = os.path.join(coversPath, id + '.' + format)
-            #if not os.path.isfile(filePath):
+            # filePath = os.path.join(coversPath, id + '.' + format)
+            # if not os.path.isfile(filePath):
             #    with open(filePath, 'wb+') as file:
             #        file.write(data)
-            #return filePath
+            # return filePath
         return None
+
 
 class Client(rumps.App):
     def __init__(self) -> None:
         self.rpc = None
         self.savedResults = {}
-        self.allowJoiners = False # Not recommended
+        self.allowJoiners = False  # Not recommended
         self.uploadCovers = False
         self.prevTrack = None
         self.metaCheckVar = 0
         self.connect()
         self.handleConfigs()
-        threading.Thread(target = self.routine, daemon = True).start()
+        threading.Thread(target=self.routine, daemon=True).start()
 
-        super().__init__('Ongaku', icon = 'images/icon_light.png', template = True, quit_button = None)
+        super().__init__(
+            "Ongaku", icon="images/icon_light.png", template=True, quit_button=None
+        )
 
     def handleConfigs(self):
         config = Config.read()
-        if config['allowJoiners'] and not self.allowJoiners:
+        if config["allowJoiners"] and not self.allowJoiners:
             self.allowJoiners = random.getrandbits(64)
-            self.rpc.IPC._subscribe('ACTIVITY_JOIN', self.join)
-        elif not config['allowJoiners'] and self.allowJoiners:
+            self.rpc.IPC._subscribe("ACTIVITY_JOIN", self.join)
+        elif not config["allowJoiners"] and self.allowJoiners:
             self.allowJoiners = False
-            self.rpc.IPC._unsubscribe('ACTIVITY_JOIN')
-        self.uploadCovers = config['uploadCovers']
+            self.rpc.IPC._unsubscribe("ACTIVITY_JOIN")
+        self.uploadCovers = config["uploadCovers"]
 
     @rumps.clicked(VER_STR)
     def About(self, sender):
         aboutWindow.orderFrontRegardless()
-    
-    @rumps.clicked('Settings...')
+
+    @rumps.clicked("Settings...")
     def Settings(self, sender):
         preferencesWindow.orderFrontRegardless()
-    
-    @rumps.clicked('Quit')
+
+    @rumps.clicked("Quit")
     def Quit(self, sender):
         rumps.quit_application()
 
-    def connect(self, clientID:str = '402370117901484042') -> None:
+    def connect(self, clientID: str = "402370117901484042") -> None:
         try:
             self.rpc = presence.Client(clientID)
         except ConnectionRefusedError:
             pass
 
-    def handle_error(self, error:Exception, quit:bool = False) -> None:
-        with open(os.path.join(path, 'error.txt'), 'a') as file:
-            file.write('[%s] %s\n' % (datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S'), error))
+    def handle_error(self, error: Exception, quit: bool = False) -> None:
+        with open(os.path.join(path, "error.txt"), "a") as file:
+            file.write(
+                "[%s] %s\n"
+                % (datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S"), error)
+            )
         if quit:
-            rumps.alert('Error in Ongaku', '"%s"' % error)
+            rumps.alert("Error in Ongaku", '"%s"' % error)
             raise error
             sys.exit()
         print(error)
-        rumps.notification('Error in Ongaku', 'Make an issue if error persists', '"%s"' % error)
+        rumps.notification(
+            "Error in Ongaku", "Make an issue if error persists", '"%s"' % error
+        )
 
-    def join(self, event:dict):
-        secret = json.loads(event['secret'])
-        webbrowser.open(secret['url'])
+    def join(self, event: dict):
+        secret = json.loads(event["secret"])
+        webbrowser.open(secret["url"])
 
-    def stateChange(self, track:Script.Track) -> bool:
-        return (
-            not self.prevTrack
-            or (
-                not (self.prevTrack.State == track.State == Script.State.STOPPED)
-                and (
-                    self.prevTrack.State != track.State
-                    or self.prevTrack.ID != track.ID
-                    or (abs(self.prevTrack.metaCheck - (time.time() + (track.Duration - track.Position))) > 2 and track.State != Script.State.PAUSED)
+    def stateChange(self, track: Script.Track) -> bool:
+        return not self.prevTrack or (
+            not (self.prevTrack.State == track.State == Script.State.STOPPED)
+            and (
+                self.prevTrack.State != track.State
+                or self.prevTrack.ID != track.ID
+                or (
+                    abs(
+                        self.prevTrack.metaCheck
+                        - (time.time() + (track.Duration - track.Position))
+                    )
+                    > 2
+                    and track.State != Script.State.PAUSED
                 )
             )
         )
@@ -299,7 +314,9 @@ class Client(rumps.App):
                     self.prevTrack = track
                     try:
                         if track.State != Script.State.STOPPED:
-                            self.prevTrack.metaCheck = time.time() + (track.Duration - track.Position)
+                            self.prevTrack.metaCheck = time.time() + (
+                                track.Duration - track.Position
+                            )
                             if self.uploadCovers:
                                 imageUrl = Script._get_artwork()
                     except Exception as err:
@@ -314,65 +331,84 @@ class Client(rumps.App):
             except Exception as err:
                 self.handle_error(err, True)
 
-    def update(self, track:Script.Track, imageUrl:str = None) -> None:
+    def update(self, track: Script.Track, imageUrl: str = None) -> None:
         presenceDict = {
-            'large_image': assetName if not imageUrl else imageUrl,
-            'large_text': appName,
-            'type': presence.ActivityType.LISTENING,
+            "large_image": assetName if not imageUrl else imageUrl,
+            "large_text": appName,
+            "type": presence.ActivityType.LISTENING,
         }
         if track.State != Script.State.STOPPED and track.State != Script.State.PAUSED:
-            presenceDict['details'] = track.Name.ljust(2, '_')[:127]
-            presenceDict['state'] = ' — '.join(filter(lambda str : str != '', [track.Artist, track.Album if not track.Album in (track.Name, track.Name + ' - Single') else '']))
+            presenceDict["details"] = track.Name.ljust(2, "_")[:127]
+            presenceDict["state"] = " — ".join(
+                filter(
+                    lambda str: str != "",
+                    [
+                        track.Artist,
+                        (
+                            track.Album
+                            if not track.Album in (track.Name, track.Name + " - Single")
+                            else ""
+                        ),
+                    ],
+                )
+            )
             if track.Position is not None and track.Duration:
-                presenceDict['start'] = time.time() - track.Position
-                presenceDict['end'] = time.time() + (track.Duration - track.Position)
-                presenceDict['small_image'] = 'play'
-                presenceDict['small_text'] = 'Playing'
-            presenceDict['state'] = presenceDict['state'].ljust(2, '_')[:127]
+                presenceDict["start"] = time.time() - track.Position
+                presenceDict["end"] = time.time() + (track.Duration - track.Position)
+                presenceDict["small_image"] = "play"
+                presenceDict["small_text"] = "Playing"
+            presenceDict["state"] = presenceDict["state"].ljust(2, "_")[:127]
 
             if track.Cloud_Status in (
                 Script.Cloud_Status.PURCHASED,
-                Script.Cloud_Status.SUBSCRIPTION
+                Script.Cloud_Status.SUBSCRIPTION,
             ):
-                searchString = 'https://itunes.apple.com/search?term=' + '+'.join([track.Name, track.Artist]).replace(' ', '+')
+                searchString = "https://itunes.apple.com/search?term=" + "+".join(
+                    [track.Name, track.Artist]
+                ).replace(" ", "+")
                 if searchString in self.savedResults:
                     store = self.savedResults[searchString]
                 else:
-                    store = requests.get(searchString).json()['results']
+                    store = requests.get(searchString).json()["results"]
                     self.savedResults[searchString] = store
                 if len(store) > 0:
                     if not self.uploadCovers:
-                        presenceDict['large_image'] = store[0]['artworkUrl100'] 
+                        presenceDict["large_image"] = store[0]["artworkUrl100"]
                     if not self.allowJoiners:
-                        presenceDict['buttons'] = [{
-                            'label': 'View in Store',
-                            'url': store[0]['trackViewUrl'],
-                        },]
+                        presenceDict["buttons"] = [
+                            {
+                                "label": "View in Store",
+                                "url": store[0]["trackViewUrl"],
+                            },
+                        ]
                     else:
-                        presenceDict['type'] = presence.ActivityType.PLAYING
-                        presenceDict['join'] = json.dumps({
-                            'url': store[0]['trackViewUrl'],
-                            'pos': track.Position,
-                        })
-                        presenceDict['party_id'] = str(self.allowJoiners)
-                        presenceDict['party_size'] = (1, 2)
-            if presenceDict['large_image'] != assetName:
-                presenceDict['large_text'] = presenceDict['details']
+                        presenceDict["type"] = presence.ActivityType.PLAYING
+                        presenceDict["join"] = json.dumps(
+                            {
+                                "url": store[0]["trackViewUrl"],
+                                "pos": track.Position,
+                            }
+                        )
+                        presenceDict["party_id"] = str(self.allowJoiners)
+                        presenceDict["party_size"] = (1, 2)
+            if presenceDict["large_image"] != assetName:
+                presenceDict["large_text"] = presenceDict["details"]
             self.rpc.update(presence.Presence(**presenceDict))
         else:
             self.rpc.update()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     app = Client()
     app.menu = [
         rumps.MenuItem(
             VER_STR,
-            icon = 'images/AppIcon.iconset/icon_1024x1024.png',
-            dimensions = (18, 18),
+            icon="images/AppIcon.iconset/icon_1024x1024.png",
+            dimensions=(18, 18),
         ),
         None,
-        rumps.MenuItem('Settings...', key = ','),
+        rumps.MenuItem("Settings...", key=","),
         None,
-        rumps.MenuItem('Quit', key = 'q'),
+        rumps.MenuItem("Quit", key="q"),
     ]
     app.run()

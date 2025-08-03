@@ -1,18 +1,25 @@
 from setuptools import setup
+from main import ONGAKU_VER, VER_STR
+from datetime import datetime
 
-APP = ['main.py']
+APP = ["main.py"]
 DATA_FILES = []
 OPTIONS = {
-    'iconfile': 'images/AppIcon.icns',
-    'plist': {
-        'CFBundleName': 'Ongaku',
-        'CFBundleShortVersionString': '1.3',
-        'LSUIElement': True,
+    "iconfile": "images/AppIcon.icns",
+    "plist": {
+        "CFBundleName": "Ongaku",
+        "CFBundleShortVersionString": ONGAKU_VER,
+        "CFBundleGetInfoString": VER_STR,
+        "LSUIElement": True,
+        "CFBundleIdentifier": "dev.mi460.ongaku",
+        "NSHumanReadableCopyright": "Copyright © 2021-%s Delta Inc.\nAll rights reserved."
+        % datetime.now().year,
     },
-    'packages': ['rumps'],
+    "packages": ["rumps"],
 }
 
 import os
+
 
 def loopThrough(directory):
     files = []
@@ -24,13 +31,15 @@ def loopThrough(directory):
             loopThrough(cur)
     DATA_FILES.append((directory, files))
 
-loopThrough('images')
 
-print('\n'.join(list(map(str, DATA_FILES))))
+loopThrough("images")
+
+print("\n".join(list(map(str, DATA_FILES))))
 
 setup(
     app=APP,
     data_files=DATA_FILES,
-    options={'py2app': OPTIONS},
-    setup_requires=['py2app'],
-    name='Ongaku')
+    options={"py2app": OPTIONS},
+    setup_requires=["py2app"],
+    name="Ongaku",
+)
