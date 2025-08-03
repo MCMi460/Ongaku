@@ -266,7 +266,9 @@ class Client(rumps.App):
         except ConnectionRefusedError:
             pass
 
-    def handle_error(self, error: Exception, quit: bool = False) -> None:
+    def handle_error(
+        self, error: Exception, quit: bool = False, *, notification: bool = True
+    ) -> None:
         with open(os.path.join(path, "error.txt"), "a") as file:
             file.write(
                 "[%s] %s\n"
@@ -277,9 +279,10 @@ class Client(rumps.App):
             raise error
             sys.exit()
         print(error)
-        rumps.notification(
-            "Error in Ongaku", "Make an issue if error persists", '"%s"' % error
-        )
+        if notification:
+            rumps.notification(
+                "Error in Ongaku", "Make an issue if error persists", '"%s"' % error
+            )
 
     def join(self, event: dict):
         secret = json.loads(event["secret"])
@@ -325,7 +328,7 @@ class Client(rumps.App):
                     time.sleep(1)
             except (AttributeError, ConnectionRefusedError, BrokenPipeError) as err:
                 time.sleep(10)
-                self.handle_error(err)
+                self.handle_error(err, notification=False)
                 self.connect()
                 self.prevTrack = None
             except Exception as err:
