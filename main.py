@@ -1,4 +1,4 @@
-ONGAKU_VER = "1.3.2"
+ONGAKU_VER = "1.3.3"
 VER_STR = "Ongaku v%s" % ONGAKU_VER
 import sys
 
@@ -16,7 +16,7 @@ if __name__ == "__main__":  # Prevent import recursion
 ver = platform.mac_ver()[0].split(".")
 ver = float(".".join((ver[0], "".join(ver[1:]))))
 
-appName = "Music"
+appName = "Apple Music"
 
 if 11.3 > ver >= 11.0:
     sys.exit(
@@ -342,19 +342,7 @@ class Client(rumps.App):
         }
         if track.State != Script.State.STOPPED and track.State != Script.State.PAUSED:
             presenceDict["details"] = track.Name.ljust(2, "_")[:127]
-            presenceDict["state"] = " — ".join(
-                filter(
-                    lambda str: str != "",
-                    [
-                        track.Artist,
-                        (
-                            track.Album
-                            if not track.Album in (track.Name, track.Name + " - Single")
-                            else ""
-                        ),
-                    ],
-                )
-            )
+            presenceDict["state"] = track.Artist
             if track.Position is not None and track.Duration:
                 presenceDict["start"] = time.time() - track.Position
                 presenceDict["end"] = time.time() + (track.Duration - track.Position)
@@ -396,6 +384,10 @@ class Client(rumps.App):
                         presenceDict["party_size"] = (1, 2)
             if presenceDict["large_image"] != assetName:
                 presenceDict["large_text"] = presenceDict["details"]
+            if not self.allowJoiners:
+                presenceDict["large_text"] = (
+                    track.Album if track.Album else "%s (%s)" % (appName, VER_STR)
+                )
             self.rpc.update(presence.Presence(**presenceDict))
         else:
             self.rpc.update()
