@@ -342,13 +342,12 @@ class Client(rumps.App):
         }
         if track.State != Script.State.STOPPED and track.State != Script.State.PAUSED:
             presenceDict["details"] = track.Name.ljust(2, "_")[:127]
-            presenceDict["state"] = track.Artist
+            presenceDict["state"] = track.Artist.ljust(2, "_")[:127]
             if track.Position is not None and track.Duration:
                 presenceDict["start"] = time.time() - track.Position
                 presenceDict["end"] = time.time() + (track.Duration - track.Position)
                 presenceDict["small_image"] = "play"
                 presenceDict["small_text"] = "Playing"
-            presenceDict["state"] = presenceDict["state"].ljust(2, "_")[:127]
 
             if track.Cloud_Status in (
                 Script.Cloud_Status.PURCHASED,
@@ -387,7 +386,7 @@ class Client(rumps.App):
             if not self.allowJoiners:
                 presenceDict["large_text"] = (
                     track.Album if track.Album else "%s (%s)" % (appName, VER_STR)
-                )
+                )[:127]
             self.rpc.update(presence.Presence(**presenceDict))
         else:
             self.rpc.update()
