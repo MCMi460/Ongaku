@@ -263,7 +263,7 @@ class Client(rumps.App):
     def connect(self, clientID: str = "402370117901484042") -> None:
         try:
             self.rpc = presence.Client(clientID)
-        except ConnectionRefusedError:
+        except (ConnectionRefusedError, FileNotFoundError):
             pass
 
     def handle_error(
