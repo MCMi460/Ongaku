@@ -173,7 +173,7 @@ class Script:
             on run
                 set text item delimiters to "%s"
             	tell application "%s"
-            		return {format, raw data} of first artwork of current track & database ID of current track
+            		return {format, raw data} of first artwork of current track & persistent ID of current track
             	end tell
             end run
         """
