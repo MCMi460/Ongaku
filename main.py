@@ -1,5 +1,6 @@
-ONGAKU_VER = "1.3.3"
+ONGAKU_VER = "1.4.0"
 VER_STR = "Ongaku v%s" % ONGAKU_VER
+VER_STR_LONG = "Ongaku Version %s" % ONGAKU_VER
 import sys
 
 if not sys.platform.startswith("darwin"):
@@ -248,7 +249,7 @@ class Client(rumps.App):
             self.rpc.IPC._unsubscribe("ACTIVITY_JOIN")
         self.uploadCovers = config["uploadCovers"]
 
-    @rumps.clicked(VER_STR)
+    @rumps.clicked("Ongaku")
     def About(self, sender):
         aboutWindow.orderFrontRegardless()
 
@@ -339,6 +340,7 @@ class Client(rumps.App):
             "large_image": assetName if not imageUrl else imageUrl,
             "large_text": appName,
             "type": presence.ActivityType.LISTENING,
+            "status_display_type": presence.StatusDisplayType.DETAILS,
         }
         if track.State != Script.State.STOPPED and track.State != Script.State.PAUSED:
             presenceDict["details"] = track.Name.ljust(2, "_")[:127]
@@ -362,16 +364,11 @@ class Client(rumps.App):
                     store = requests.get(searchString).json()["results"]
                     self.savedResults[searchString] = store
                 if len(store) > 0:
+                    presenceDict["details_url"] = store[0]["trackViewUrl"]
+                    presenceDict["state_url"] = store[0]["artistViewUrl"]
                     if not self.uploadCovers:
                         presenceDict["large_image"] = store[0]["artworkUrl100"]
-                    if not self.allowJoiners:
-                        presenceDict["buttons"] = [
-                            {
-                                "label": "View in Store",
-                                "url": store[0]["trackViewUrl"],
-                            },
-                        ]
-                    else:
+                    if self.allowJoiners:
                         presenceDict["type"] = presence.ActivityType.PLAYING
                         presenceDict["join"] = json.dumps(
                             {
@@ -396,7 +393,7 @@ if __name__ == "__main__":
     app = Client()
     app.menu = [
         rumps.MenuItem(
-            VER_STR,
+            "Ongaku",
             icon="images/AppIcon.iconset/icon_1024x1024.png",
             dimensions=(18, 18),
         ),

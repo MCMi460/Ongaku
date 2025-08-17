@@ -1,7 +1,7 @@
 # Thrown-together AppKit graphics user interface
 from AppKit import *
 from PyObjCTools import AppHelper
-from main import VER_STR, Config
+from main import VER_STR, VER_STR_LONG, Config
 
 configs = Config.read()
 
@@ -133,7 +133,7 @@ author.string = "Made painstakingly by MCMi460"
 author.center()
 aboutWindow.contentView().addSubview_(author.object)
 version = Text(NSMakeRect(18.0, 75.0, 265.0, 20.0))
-version.string = VER_STR
+version.string = VER_STR_LONG
 version.center()
 aboutWindow.contentView().addSubview_(version.object)
 
