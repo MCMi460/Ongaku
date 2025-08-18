@@ -104,9 +104,17 @@ class Script:
     def song(self) -> "Script.Track":
         # typing.Tuple[typing.Tuple[int, str, str, str, float, 'Script.Cloud_Status', 'Script.State', float]]
         try:
-            ID, Name, Album, Artist, Duration, Cloud_Status, State, Position = (
-                Script._script().split(Script.DELIMITER)
-            )
+            (
+                ID,
+                Name,
+                Album,
+                Artist,
+                Duration,
+                Cloud_Status,
+                Comment,
+                State,
+                Position,
+            ) = Script._script().split(Script.DELIMITER)
             ID = int(ID)
             Duration = float(Duration)
             Cloud_Status = Script.Cloud_Status[Cloud_Status.upper().replace(" ", "_")]
@@ -124,6 +132,7 @@ class Script:
             Artist=Artist,
             Duration=Duration,
             Cloud_Status=Cloud_Status,
+            Comment=Comment,
             State=State,
             Position=Position,
             # Lyrics = Script._get_lyrics(),
@@ -135,7 +144,7 @@ class Script:
             on run
                 set text item delimiters to "%s"
                 tell application "%s"
-                    return {database ID, name, album, artist, duration, cloud status} of current track & player state & player position as text
+                    return {database ID, name, album, artist, duration, cloud status, comment} of current track & player state & player position as text
                 end tell
             end run
         """
@@ -378,6 +387,18 @@ class Client(rumps.App):
                         )
                         presenceDict["party_id"] = str(self.allowJoiners)
                         presenceDict["party_size"] = (1, 2)
+            elif not track.Comment.isspace():
+                try:
+                    url = urllib.parse.urlparse(track.Comment)
+                    assert url.scheme == "https"
+                    assert url.netloc.lstrip("www.") in (
+                        "youtube.com",
+                        "youtu.be",
+                        "open.spotify.com",
+                    )
+                    presenceDict["details_url"] = url.geturl()
+                except (AttributeError, AssertionError):
+                    pass
             if presenceDict["large_image"] != assetName:
                 presenceDict["large_text"] = presenceDict["details"]
             if not self.allowJoiners:
