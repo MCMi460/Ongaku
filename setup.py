@@ -1,6 +1,5 @@
 from setuptools import setup
-from main import ONGAKU_VER, VER_STR
-from datetime import datetime
+from main import ONGAKU_VER, VER_STR, year
 
 APP = ["main.py"]
 DATA_FILES = []
@@ -13,7 +12,7 @@ OPTIONS = {
         "LSUIElement": True,
         "CFBundleIdentifier": "dev.mi460.ongaku",
         "NSHumanReadableCopyright": "Copyright © 2021-%s Delta Inc.\nAll rights reserved."
-        % datetime.now().year,
+        % year,
     },
     "packages": ["rumps"],
 }

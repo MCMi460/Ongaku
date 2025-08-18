@@ -5,6 +5,8 @@ from main import VER_STR, VER_STR_LONG, Config
 
 configs = Config.read()
 
+application = NSApplication.sharedApplication()
+
 
 # Overwrite window closing method to comply with rumps
 class Delegate(NSObject):
@@ -29,6 +31,12 @@ configMatch = {
 }
 
 
+# Links
+class URL:
+    def __init__(self, link: str):
+        self.object = NSURL.URLWithString_(link)
+
+
 # Text fields
 class Text:
     def __init__(self, rect: NSRect):
@@ -36,6 +44,7 @@ class Text:
         self.object.setDrawsBackground_(False)
         self.object.setEditable_(False)
         self.object.setRichText_(True)
+        self.object.setFont_(NSFont.systemFontOfSize_(NSFont.systemFontSize()))
         # self.object.setSelectable_(False)
 
     @property
@@ -51,8 +60,34 @@ class Text:
             NSBoldFontMask, NSMakeRange(0, len(self.string))
         )
 
+    def setItalic(self):
+        self.object.textStorage().applyFontTraits_range_(
+            NSItalicFontMask, NSMakeRange(0, len(self.string))
+        )
+
+    def addLink(self, link: URL, start: int, length: int):
+        self.object.textStorage().addAttribute_value_range_(
+            NSLinkAttributeName, link.object, NSMakeRange(start, length)
+        )
+
+    def hideLink(self):
+        # linkAttrs = self.object.linkTextAttributes()
+        # for key in linkAttrs:
+        #    print("%s:%s"%(key, linkAttrs[key]))
+        self.object.setLinkTextAttributes_(
+            NSDictionary.dictionaryWithDictionary_(
+                {
+                    NSUnderlineStyleAttributeName: NSUnderlineStyleNone,
+                    NSCursorAttributeName: NSCursor.pointingHandCursor(),
+                }
+            )
+        )
+
     def center(self):
         self.object.setAlignment_(NSCenterTextAlignment)
+
+    def small(self):
+        self.object.setFont_(NSFont.systemFontOfSize_(NSFont.smallSystemFontSize()))
 
 
 # Buttons
@@ -105,6 +140,10 @@ class Image:
 
 # Actual view-building
 
+# Set application accent color
+application._setAccentColor_(NSColor.redColor())
+# NSColor.colorWithCalibratedRed_green_blue_alpha_(0.988, 0.235, 0.267, 1.0)
+
 # Create NSWindow -- 'About' page
 aboutWindow = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_(
     NSMakeRect(0.0, 0.0, 300.0, 300.0),
@@ -125,17 +164,29 @@ aboutWindow.contentView().addSubview_(icon.object)
 
 title = Text(NSMakeRect(18.0, 125.0, 265.0, 20.0))
 title.string = "Ongaku"
+title.addLink(URL("https://github.com/MCMi460/Ongaku"), 0, 6)
+title.hideLink()
 title.center()
 title.setBold()
 aboutWindow.contentView().addSubview_(title.object)
 author = Text(NSMakeRect(18.0, 100.0, 265.0, 20.0))
-author.string = "Made painstakingly by MCMi460"
+author.string = "You know, ongaku."
+author.addLink(URL(r"https://jisho.org/word/%E9%9F%B3%E6%A5%BD"), 10, 6)
+author.setItalic()
 author.center()
 aboutWindow.contentView().addSubview_(author.object)
 version = Text(NSMakeRect(18.0, 75.0, 265.0, 20.0))
 version.string = VER_STR_LONG
 version.center()
+version.small()
 aboutWindow.contentView().addSubview_(version.object)
+copyrightText = Text(NSMakeRect(18.0, 25.0, 265.0, 20.0))
+copyrightText.string = "™ and © 2021-2025 Delta Inc.\nAll Rights Reserved."
+copyrightText.addLink(URL("https://mi460.dev/"), 0, 49)
+copyrightText.hideLink()
+copyrightText.center()
+copyrightText.small()
+aboutWindow.contentView().addSubview_(copyrightText.object)
 
 # Create NSWindow -- 'Preferences' page
 preferencesWindow = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_(
@@ -163,7 +214,6 @@ preferencesWindow.contentView().addSubview_(allowJoinersButton.object)
 
 # If running as a debug process
 if __name__ == "__main__":
-    application = NSApplication.sharedApplication()
     application.setDelegate_(delegate)
     # Windows
     aboutWindow.orderFrontRegardless()

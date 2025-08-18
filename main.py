@@ -1,12 +1,17 @@
 ONGAKU_VER = "1.4.0"
 VER_STR = "Ongaku v%s" % ONGAKU_VER
-VER_STR_LONG = "Ongaku Version %s" % ONGAKU_VER
+VER_STR_LONG = "Ongaku version %s" % ONGAKU_VER
+
+import datetime
+
+year = datetime.datetime.now().year
+
 import sys
 
 if not sys.platform.startswith("darwin"):
     sys.exit("Non-MacOS is not yet supported. Sorry!")
 
-import platform, os, json, time, threading, subprocess, urllib, typing, enum, datetime, webbrowser, random, faulthandler, base64
+import platform, os, json, time, threading, subprocess, urllib, typing, enum, webbrowser, random, faulthandler, base64
 
 faulthandler.enable()
 import rumps, requests, presence
