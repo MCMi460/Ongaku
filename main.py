@@ -380,6 +380,7 @@ class Client(rumps.App):
                 if len(store) > 0:
                     presenceDict["details_url"] = store[0]["trackViewUrl"]
                     presenceDict["state_url"] = store[0]["artistViewUrl"]
+                    presenceDict["large_url"] = store[0]["collectionViewUrl"]
                     if not self.uploadCovers:
                         presenceDict["large_image"] = store[0]["artworkUrl100"]
                     if self.allowJoiners:
@@ -402,6 +403,7 @@ class Client(rumps.App):
                         "open.spotify.com",
                     )
                     presenceDict["details_url"] = url.geturl()
+                    presenceDict["large_url"] = url.geturl()
                 except (AttributeError, AssertionError):
                     pass
             if presenceDict["large_image"] != assetName:
