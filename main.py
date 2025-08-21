@@ -403,7 +403,6 @@ class Client(rumps.App):
                         "open.spotify.com",
                     )
                     presenceDict["details_url"] = url.geturl()
-                    presenceDict["large_url"] = url.geturl()
                 except (AttributeError, AssertionError):
                     pass
             if presenceDict["large_image"] != assetName:
@@ -412,6 +411,8 @@ class Client(rumps.App):
                 presenceDict["large_text"] = (
                     track.Album if track.Album else "%s (%s)" % (appName, VER_STR)
                 )[:127]
+                if not track.Album:
+                    presenceDict["large_url"] = "https://github.com/MCMi460/Ongaku"
             self.rpc.update(presence.Presence(**presenceDict))
         else:
             self.rpc.update()
