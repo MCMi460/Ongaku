@@ -1,4 +1,4 @@
-ONGAKU_VER = "1.4.0"
+ONGAKU_VER = "1.5.0"
 VER_STR = "Ongaku v%s" % ONGAKU_VER
 VER_STR_LONG = "Ongaku version %s" % ONGAKU_VER
 
@@ -428,9 +428,14 @@ if __name__ == "__main__":
         rumps.MenuItem(
             "Ongaku",
             icon="images/AppIcon.iconset/icon_1024x1024.png",
-            dimensions=(18, 18),
+            dimensions=(24, 24),
         ),
-        rumps.MenuItem("iPhone", key="i"),
+        rumps.MenuItem(
+            "iPhone",
+            icon="images/iphone.gen2.crop.circle.png",
+            dimensions=(24, 24),
+            key="i",
+        ),
         None,
         rumps.MenuItem("Settings...", key=","),
         None,

@@ -2,6 +2,17 @@
 from AppKit import *
 from PyObjCTools import AppHelper
 from main import VER_STR, VER_STR_LONG, Config
+from webbrowser import open as open_url
+from phone import (
+    desktopUrl,
+    mobileUrl,
+    desktopShortcut,
+    mobileShortcut,
+    await_shortcut_addition,
+    disable_button,
+    shortcut_exists,
+)
+from threading import Thread
 
 configs = Config.read()
 
@@ -11,7 +22,7 @@ application = NSApplication.sharedApplication()
 # Overwrite window closing method to comply with rumps
 class Delegate(NSObject):
     def windowShouldClose_(self, window: NSWindow) -> bool:
-        window.orderOut_(window)
+        window.hide()
         return False
 
     def updateConfig_(self, sender):
@@ -21,6 +32,37 @@ class Delegate(NSObject):
                 configs[setting] = bool(sender.state())
                 Config.write(configs)
                 break
+
+    def desktopShortcut_(self, sender):
+        sender.setTitle_("⧖ Waiting...")
+        open_url(desktopUrl)
+        sender.setEnabled_(False)
+        Thread(
+            target=await_shortcut_addition,
+            args=(
+                sender,
+                desktopShortcut,
+                airdropButton.object,
+            ),
+            daemon=True,
+        ).start()
+
+    def mobileShortcut_(self, sender):
+        sender.setTitle_("⧖ Waiting...")
+        open_url(mobileUrl)
+        sender.setEnabled_(False)
+        Thread(
+            target=await_shortcut_addition,
+            args=(
+                sender,
+                mobileShortcut,
+                airdropButton.object,
+            ),
+            daemon=True,
+        ).start()
+
+    def airdropStart_(self, sender):
+        print("start")
 
 
 delegate = Delegate.alloc().init()
@@ -37,6 +79,11 @@ class Window(NSWindow):
         self.orderFrontRegardless()
         self.makeKeyAndOrderFront_(self)
         application.activate()
+
+    def hide(self):
+        self.orderOut_(
+            self
+        )  # This little 'hack' fixes seg faults when running with rumps
 
 
 # Links
@@ -94,6 +141,9 @@ class Text:
     def center(self):
         self.object.setAlignment_(NSCenterTextAlignment)
 
+    def rightAlign(self):
+        self.object.setAlignment_(NSRightTextAlignment)
+
     def small(self):
         self.object.setFont_(NSFont.systemFontOfSize_(NSFont.smallSystemFontSize()))
 
@@ -114,6 +164,12 @@ class Button:
 
     def setAction(self, action: str):
         self.object.setAction_(action)
+
+    def enable(self):
+        self.object.setEnabled_(True)
+
+    def disable(self):
+        self.object.setEnabled_(False)
 
 
 class Checkbox(Button):
@@ -162,9 +218,7 @@ aboutWindow = Window.alloc().initWithContentRect_styleMask_backing_defer_(
 aboutWindow.center()
 aboutWindow.setTitle_("About Ongaku")
 aboutWindow.setDelegate_(delegate)
-aboutWindow.orderOut_(
-    aboutWindow
-)  # This little 'hack' fixes seg faults when running with rumps
+aboutWindow.hide()
 
 icon = Image(NSMakeRect(85.0, 150.0, 130.0, 130.0))
 icon.path = "images/AppIcon.iconset/icon_1024x1024.png"
@@ -206,7 +260,7 @@ preferencesWindow = Window.alloc().initWithContentRect_styleMask_backing_defer_(
 preferencesWindow.center()
 preferencesWindow.setTitle_("Ongaku Settings")
 preferencesWindow.setDelegate_(delegate)
-preferencesWindow.orderOut_(preferencesWindow)
+preferencesWindow.hide()
 
 uploadCoversButton = Checkbox(NSMakeRect(30.0, 180.0, 350.0, 40.0))
 uploadCoversButton.title = configMatch["uploadCovers"]
@@ -230,7 +284,48 @@ phoneWindow = Window.alloc().initWithContentRect_styleMask_backing_defer_(
 phoneWindow.center()
 phoneWindow.setTitle_("iPhone Extension")
 phoneWindow.setDelegate_(delegate)
-phoneWindow.orderOut_(phoneWindow)
+phoneWindow.hide()
+
+phoneIcon = Image(NSMakeRect(145.0, 180.0, 90.0, 90.0))
+phoneIcon.path = "images/iphone.gen2.crop.circle.png"
+phoneWindow.contentView().addSubview_(phoneIcon.object)
+
+title = Text(NSMakeRect(57.0, 145.0, 265.0, 20.0))
+title.string = "iPhone Connect"
+title.center()
+title.setBold()
+phoneWindow.contentView().addSubview_(title.object)
+
+desktopAdd = Button(NSMakeRect(200.0, 100.0, 150.0, 40.0))
+desktopAdd.title = "+ Add Shortcut"
+desktopAdd.setAction("desktopShortcut:")
+if shortcut_exists(desktopShortcut):
+    disable_button(desktopAdd.object)
+phoneWindow.contentView().addSubview_(desktopAdd.object)
+
+desktopAddText = Text(NSMakeRect(30.0, 110.0, 150.0, 20.0))
+desktopAddText.string = "OngakuDesktop:"
+desktopAddText.rightAlign()
+phoneWindow.contentView().addSubview_(desktopAddText.object)
+
+mobileAdd = Button(NSMakeRect(200.0, 60.0, 150.0, 40.0))
+mobileAdd.title = "+ Add Shortcut"
+mobileAdd.setAction("mobileShortcut:")
+if shortcut_exists(mobileShortcut):
+    disable_button(mobileAdd.object)
+phoneWindow.contentView().addSubview_(mobileAdd.object)
+
+mobileAddText = Text(NSMakeRect(30.0, 70.0, 150.0, 20.0))
+mobileAddText.string = "OngakuPhone:"
+mobileAddText.rightAlign()
+phoneWindow.contentView().addSubview_(mobileAddText.object)
+
+airdropButton = Button(NSMakeRect(115.0, 20.0, 150.0, 40.0))
+airdropButton.title = "Connect to iPhone"
+airdropButton.setAction("airdropStart:")
+if not shortcut_exists(mobileShortcut) or not shortcut_exists(desktopShortcut):
+    airdropButton.disable()
+phoneWindow.contentView().addSubview_(airdropButton.object)
 
 # If running as a debug process
 if __name__ == "__main__":
