@@ -17,7 +17,7 @@ faulthandler.enable()
 import rumps, requests, presence
 
 if __name__ == "__main__":  # Prevent import recursion
-    from graphics import aboutWindow, preferencesWindow
+    from graphics import aboutWindow, preferencesWindow, phoneWindow
 
 ver = platform.mac_ver()[0].split(".")
 ver = float(".".join((ver[0], "".join(ver[1:]))))
@@ -265,11 +265,15 @@ class Client(rumps.App):
 
     @rumps.clicked("Ongaku")
     def About(self, sender):
-        aboutWindow.orderFrontRegardless()
+        aboutWindow.showFront()
+
+    @rumps.clicked("iPhone")
+    def iPhone(self, sender):
+        phoneWindow.showFront()
 
     @rumps.clicked("Settings...")
     def Settings(self, sender):
-        preferencesWindow.orderFrontRegardless()
+        preferencesWindow.showFront()
 
     @rumps.clicked("Quit")
     def Quit(self, sender):
@@ -426,6 +430,7 @@ if __name__ == "__main__":
             icon="images/AppIcon.iconset/icon_1024x1024.png",
             dimensions=(18, 18),
         ),
+        rumps.MenuItem("iPhone", key="i"),
         None,
         rumps.MenuItem("Settings...", key=","),
         None,

@@ -31,6 +31,14 @@ configMatch = {
 }
 
 
+# Windows
+class Window(NSWindow):
+    def showFront(self):
+        self.orderFrontRegardless()
+        self.makeKeyAndOrderFront_(self)
+        application.activate()
+
+
 # Links
 class URL:
     def __init__(self, link: str):
@@ -145,7 +153,7 @@ application._setAccentColor_(NSColor.redColor())
 # NSColor.colorWithCalibratedRed_green_blue_alpha_(0.988, 0.235, 0.267, 1.0)
 
 # Create NSWindow -- 'About' page
-aboutWindow = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_(
+aboutWindow = Window.alloc().initWithContentRect_styleMask_backing_defer_(
     NSMakeRect(0.0, 0.0, 300.0, 300.0),
     NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask,
     NSBackingStoreBuffered,
@@ -189,7 +197,7 @@ copyrightText.small()
 aboutWindow.contentView().addSubview_(copyrightText.object)
 
 # Create NSWindow -- 'Preferences' page
-preferencesWindow = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_(
+preferencesWindow = Window.alloc().initWithContentRect_styleMask_backing_defer_(
     NSMakeRect(0.0, 0.0, 380.0, 300.0),
     NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask,
     NSBackingStoreBuffered,
@@ -212,11 +220,24 @@ allowJoinersButton.state = configs["allowJoiners"]
 allowJoinersButton.setAction("updateConfig:")
 preferencesWindow.contentView().addSubview_(allowJoinersButton.object)
 
+# Create NSWindow -- 'iPhone' page
+phoneWindow = Window.alloc().initWithContentRect_styleMask_backing_defer_(
+    NSMakeRect(0.0, 0.0, 380.0, 300.0),
+    NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask,
+    NSBackingStoreBuffered,
+    False,
+)
+phoneWindow.center()
+phoneWindow.setTitle_("iPhone Extension")
+phoneWindow.setDelegate_(delegate)
+phoneWindow.orderOut_(phoneWindow)
+
 # If running as a debug process
 if __name__ == "__main__":
     application.setDelegate_(delegate)
     # Windows
     aboutWindow.orderFrontRegardless()
     preferencesWindow.orderFrontRegardless()
+    phoneWindow.orderFrontRegardless()
 
     AppHelper.runEventLoop()
