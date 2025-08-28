@@ -68,14 +68,14 @@ class Config:
 class Script:
     DELIMITER = "🤷"
 
-    class State(enum.Enum):
+    class State(enum.IntEnum):
         STOPPED = 0
         PLAYING = 1
         PAUSED = 2
         FAST_FORWARDING = 3
         REWINDING = 4
 
-    class Cloud_Status(enum.Enum):
+    class Cloud_Status(enum.IntEnum):
         MISSING_VALUE = -1
         UNKNOWN = 0
         PURCHASED = 1
@@ -92,6 +92,7 @@ class Script:
 
     class Track:
         def __init__(self, **kwargs) -> None:
+            self._raw = kwargs
             for key in kwargs.keys():
                 self.__dict__[key] = kwargs[key]
 
@@ -120,7 +121,6 @@ class Script:
                 State,
                 Position,
             ) = Script._script().split(Script.DELIMITER)
-            ID = int(ID)
             Duration = float(Duration)
             Cloud_Status = Script.Cloud_Status[Cloud_Status.upper().replace(" ", "_")]
             State = Script.State[State.upper().replace(" ", "_")]
@@ -149,7 +149,7 @@ class Script:
             on run
                 set text item delimiters to "%s"
                 tell application "%s"
-                    return {database ID, name, album, artist, duration, cloud status, comment} of current track & player state & player position as text
+                    return {persistent ID, name, album, artist, duration, cloud status, comment} of current track & player state & player position as text
                 end tell
             end run
         """
