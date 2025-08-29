@@ -77,9 +77,9 @@ configMatch = {
 # Windows
 class Window(NSWindow):
     def showFront(self):
-        self.orderFrontRegardless()
-        self.makeKeyAndOrderFront_(self)
         application.activate()
+        self.makeKeyAndOrderFront_(self)
+        self.orderFrontRegardless()
 
     def hide(self):
         self.orderOut_(
