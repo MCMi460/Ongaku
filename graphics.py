@@ -11,6 +11,7 @@ from phone import (
     await_shortcut_addition,
     disable_button,
     shortcut_exists,
+    start_server,
 )
 from threading import Thread
 
@@ -62,7 +63,7 @@ class Delegate(NSObject):
         ).start()
 
     def airdropStart_(self, sender):
-        print("start")
+        start_server(airdropButton.callback)
 
 
 delegate = Delegate.alloc().init()
@@ -334,5 +335,8 @@ if __name__ == "__main__":
     aboutWindow.orderFrontRegardless()
     preferencesWindow.orderFrontRegardless()
     phoneWindow.orderFrontRegardless()
+
+    # Misc.
+    airdropButton.callback = None
 
     AppHelper.runEventLoop()

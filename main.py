@@ -17,7 +17,7 @@ faulthandler.enable()
 import rumps, requests, presence
 
 if __name__ == "__main__":  # Prevent import recursion
-    from graphics import aboutWindow, preferencesWindow, phoneWindow
+    from graphics import aboutWindow, preferencesWindow, phoneWindow, airdropButton
 
 ver = platform.mac_ver()[0].split(".")
 ver = float(".".join((ver[0], "".join(ver[1:]))))
@@ -237,6 +237,16 @@ class Script:
         return None
 
 
+class Mobile:
+    def parse_duration(time: str):
+        time = list(map(int, time.split(":")))
+        duration = 0
+        for i in range(len(time) - 1):
+            duration += time[i] * 60 ** (len(time) - i - 1)
+        duration += time[-1]
+        return duration
+
+
 class Client(rumps.App):
     def __init__(self) -> None:
         self.rpc = None
@@ -248,10 +258,32 @@ class Client(rumps.App):
         self.connect()
         self.handleConfigs()
         threading.Thread(target=self.routine, daemon=True).start()
+        airdropButton.callback = self
+        self.mobilePresence = {}
+        self.mobilePlaying = False
+        self.mobileOpened = False
+        self.mobileStateChange = True
 
         super().__init__(
             "Ongaku", icon="images/icon_light.png", template=True, quit_button=None
         )
+
+    def updateMobile(self, body: dict):
+        body["playback"] = Mobile.parse_duration(body["playback"])
+        body["duration"] = Mobile.parse_duration(body["duration"])
+        if self.mobilePresence:
+            if body["playback"] > self.mobilePresence["playback"]:
+                if not self.mobilePlaying:
+                    self.mobileStateChange = True
+                self.mobilePlaying = True
+            else:
+                self.mobilePlaying = False
+            if (
+                body["title"] != self.mobilePresence["title"]
+                or body["playback"] < self.mobilePresence["playback"]
+            ):
+                self.mobileStateChange = True
+        self.mobilePresence = body
 
     def handleConfigs(self):
         config = Config.read()
@@ -332,7 +364,12 @@ class Client(rumps.App):
                 imageUrl = None
                 self.handleConfigs()
 
-                if self.stateChange(track) or self.allowJoiners:
+                if self.mobilePlaying:
+                    self.mobileUpdate()
+                elif self.mobileOpened:
+                    self.rpc.update()
+                    self.mobileOpened = False
+                elif self.stateChange(track) or self.allowJoiners:
                     self.prevTrack = track
                     try:
                         if track.State != Script.State.STOPPED:
@@ -420,6 +457,25 @@ class Client(rumps.App):
             self.rpc.update(presence.Presence(**presenceDict))
         else:
             self.rpc.update()
+
+    def mobileUpdate(self):
+        self.mobileOpened = True
+        presenceDict = {
+            "large_image": assetName,
+            "large_text": "%s (%s)" % (appName, VER_STR),
+            "large_url": "https://github.com/MCMi460/Ongaku",
+            # "small_image": "iphone_gen2_circle",
+            # "small_text": "OngakuPhone",
+            "type": presence.ActivityType.LISTENING,
+            "status_display_type": presence.StatusDisplayType.DETAILS,
+        }
+        presenceDict["details"] = self.mobilePresence["title"].ljust(2, "_")[:127]
+        presenceDict["state"] = self.mobilePresence["artist"].ljust(2, "_")[:127]
+        presenceDict["start"] = time.time() - self.mobilePresence["playback"]
+        presenceDict["end"] = presenceDict["start"] + self.mobilePresence["duration"]
+        if self.mobileStateChange:
+            self.rpc.update(presence.Presence(**presenceDict))
+            self.mobileStateChange = False
 
 
 if __name__ == "__main__":
