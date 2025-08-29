@@ -317,7 +317,7 @@ class Client(rumps.App):
     def Quit(self, sender):
         rumps.quit_application()
 
-    def connect(self, clientID: str = "717091213148160041") -> None:
+    def connect(self, clientID: str = "402370117901484042") -> None:
         try:
             self.rpc = presence.Client(clientID)
         except (ConnectionRefusedError, FileNotFoundError):
