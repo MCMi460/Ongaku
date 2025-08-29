@@ -5,8 +5,8 @@ from subprocess import call, run
 from json import loads
 
 shortcutVer = 1
-desktopUrl = "https://www.icloud.com/shortcuts/7a60615dac214ab1a9f17356cfad087c"
-mobileUrl = "https://www.icloud.com/shortcuts/d9ec70d861674c7fb6287436e6b4551c"
+desktopUrl = "https://www.icloud.com/shortcuts/10dc5af8b871484a836c5d2f62757476"
+mobileUrl = "https://www.icloud.com/shortcuts/71f43a132b40411f895983a56f976f19"
 desktopShortcut = "OngakuDesktop"
 mobileShortcut = "OngakuPhone"
 
@@ -33,6 +33,13 @@ app_callback = None
 
 
 class Server(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == "/verify":
+            self.send_response(200)
+        else:
+            self.send_response(404)
+        self.end_headers()
+
     def do_POST(self):
         self.send_response(200)
         self.end_headers()

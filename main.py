@@ -126,7 +126,9 @@ class Script:
             State = Script.State[State.upper().replace(" ", "_")]
             Position = float(Position)
         except ValueError:
-            ID = Name = Album = Artist = Duration = Cloud_Status = Position = None
+            ID = Name = Album = Artist = Duration = Cloud_Status = Comment = (
+                Position
+            ) = None
             State = Script.State.STOPPED
         except Exception as err:
             raise err  # Intentionally raise exception
@@ -263,6 +265,7 @@ class Client(rumps.App):
         self.mobilePlaying = False
         self.mobileOpened = False
         self.mobileStateChange = True
+        self.mobileLastUpdate = 0
 
         super().__init__(
             "Ongaku", icon="images/icon_light.png", template=True, quit_button=None
@@ -284,6 +287,9 @@ class Client(rumps.App):
             ):
                 self.mobileStateChange = True
         self.mobilePresence = body
+        self.mobileLastUpdate = time.time()
+        airdropButton.disable()
+        airdropButton.title = "ᯤ Connected"
 
     def handleConfigs(self):
         config = Config.read()
@@ -311,7 +317,7 @@ class Client(rumps.App):
     def Quit(self, sender):
         rumps.quit_application()
 
-    def connect(self, clientID: str = "402370117901484042") -> None:
+    def connect(self, clientID: str = "717091213148160041") -> None:
         try:
             self.rpc = presence.Client(clientID)
         except (ConnectionRefusedError, FileNotFoundError):
@@ -359,6 +365,14 @@ class Client(rumps.App):
     def routine(self) -> None:
         while True:
             time.sleep(1)
+
+            if time.time() - self.mobileLastUpdate >= 4 and self.mobilePresence:
+                airdropButton.enable()
+                airdropButton.title = "Connect to iPhone"
+                self.mobilePresence = {}
+                self.mobilePlaying = False
+                self.mobileOpened = True
+
             try:
                 track = Script().song
                 imageUrl = None
@@ -366,9 +380,11 @@ class Client(rumps.App):
 
                 if self.mobilePlaying:
                     self.mobileUpdate()
+                    self.prevTrack = None
                 elif self.mobileOpened:
                     self.rpc.update()
                     self.mobileOpened = False
+                    self.prevTrack = None
                 elif self.stateChange(track) or self.allowJoiners:
                     self.prevTrack = track
                     try:
@@ -464,8 +480,12 @@ class Client(rumps.App):
             "large_image": assetName,
             "large_text": "%s (%s)" % (appName, VER_STR),
             "large_url": "https://github.com/MCMi460/Ongaku",
-            # "small_image": "iphone_gen2_circle",
-            # "small_text": "OngakuPhone",
+            "small_image": (
+                "iphone_gen2_circle"
+                if self.mobilePresence["device"] == "iPhone"
+                else "ipad_gen1_crop_homebutton_circle"
+            ),
+            "small_text": self.mobilePresence["device"],
             "type": presence.ActivityType.LISTENING,
             "status_display_type": presence.StatusDisplayType.DETAILS,
         }

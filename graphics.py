@@ -63,7 +63,7 @@ class Delegate(NSObject):
         ).start()
 
     def airdropStart_(self, sender):
-        start_server(airdropButton.callback)
+        Thread(target=start_server, args=(airdropButton.callback,), daemon=True).start()
 
 
 delegate = Delegate.alloc().init()
@@ -283,7 +283,7 @@ phoneWindow = Window.alloc().initWithContentRect_styleMask_backing_defer_(
     False,
 )
 phoneWindow.center()
-phoneWindow.setTitle_("iPhone Extension")
+phoneWindow.setTitle_("iPhone Connect")
 phoneWindow.setDelegate_(delegate)
 phoneWindow.hide()
 
