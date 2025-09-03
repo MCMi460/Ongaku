@@ -4,7 +4,8 @@ from time import sleep
 from subprocess import call, run
 from json import loads
 
-shortcutVer = 1
+port = 18841
+shortcutVer = 2
 desktopUrl = "https://www.icloud.com/shortcuts/10dc5af8b871484a836c5d2f62757476"
 mobileUrl = "https://www.icloud.com/shortcuts/71f43a132b40411f895983a56f976f19"
 desktopShortcut = "OngakuDesktop"
@@ -51,7 +52,7 @@ class Server(BaseHTTPRequestHandler):
             print(post_body)
 
 
-httpd = HTTPServer(("", 18841), Server)
+httpd = HTTPServer(("", port), Server)
 server = Thread(target=httpd.serve_forever, daemon=True)
 
 
@@ -60,6 +61,7 @@ def start_server(callback):
     app_callback = callback
     if not server.is_alive():
         server.start()
+        print("HTTP:%d [SERVING]" % port)
     call(["shortcuts", "run", desktopShortcut])
 
 
