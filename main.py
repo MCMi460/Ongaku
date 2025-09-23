@@ -426,18 +426,25 @@ class Client(rumps.App):
                 Script.Cloud_Status.PURCHASED,
                 Script.Cloud_Status.SUBSCRIPTION,
             ):
-                searchString = "https://itunes.apple.com/search?term=" + "+".join(
-                    [track.Name, track.Artist]
-                ).replace(" ", "+")
+                searchList = (
+                    [track.Name, track.Artist] + [track.Album] if track.Album else []
+                )
+                searchString = (
+                    "https://itunes.apple.com/search?media=music&term="
+                    + "+".join(searchList).replace(" ", "+")
+                )
                 if searchString in self.savedResults:
                     store = self.savedResults[searchString]
                 else:
                     store = requests.get(searchString).json()["results"]
                     self.savedResults[searchString] = store
                 if len(store) > 0:
-                    presenceDict["details_url"] = store[0]["trackViewUrl"]
-                    presenceDict["state_url"] = store[0]["artistViewUrl"]
-                    presenceDict["large_url"] = store[0]["collectionViewUrl"]
+                    if "trackViewUrl" in store[0]:
+                        presenceDict["details_url"] = store[0]["trackViewUrl"]
+                    if "artistViewUrl" in store[0]:
+                        presenceDict["state_url"] = store[0]["artistViewUrl"]
+                    if "collectionViewUrl" in store[0]:
+                        presenceDict["large_url"] = store[0]["collectionViewUrl"]
                     if not self.uploadCovers:
                         presenceDict["large_image"] = store[0]["artworkUrl100"]
                     if self.allowJoiners:
